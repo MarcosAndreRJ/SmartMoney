@@ -33,6 +33,7 @@ import { GoalContributionsPageComponent } from './features/goals/goal-contributi
 import { DataManagementComponent } from './features/data-management/data-management.component';
 import { RecurringSchedulerService } from './core/services/recurring-scheduler.service';
 import { SubscriptionPageComponent } from './features/subscription/subscription-page.component';
+import { SubscriptionCheckoutComponent } from './features/subscription/subscription-checkout.component';
 
 import { AdminLayoutComponent } from './features/admin/admin-layout.component';
 import { AdminDashboardComponent } from './features/admin/admin-dashboard/admin-dashboard.component';
@@ -53,7 +54,7 @@ import { AdminNotificationsComponent } from './features/admin/admin-notification
     ContactsComponent, NotificationsComponent, SharedAccountsComponent,
     RecurringTransactionsComponent, InvestmentsComponent, TransactionsPageComponent, LoansPageComponent, AuthComponent,
     ToastComponent, LoadingOverlayComponent, GoalContributionsPageComponent, DataManagementComponent,
-    CreditCardsPageComponent, SubscriptionPageComponent,
+    CreditCardsPageComponent, SubscriptionPageComponent, SubscriptionCheckoutComponent,
     AdminLayoutComponent, AdminDashboardComponent, AdminUsersComponent, AdminPlansComponent,
     AdminSubscriptionsComponent, AdminTransactionsComponent, AdminNotificationsComponent
   ],
@@ -127,6 +128,8 @@ import { AdminNotificationsComponent } from './features/admin/admin-notification
               <app-data-management></app-data-management>
             } @else if (currentView() === 'subscription') {
               <app-subscription-page></app-subscription-page>
+            } @else if (currentView() === 'subscription-checkout') {
+              <app-subscription-checkout></app-subscription-checkout>
             } @else if (currentView() === 'settings') {
               <div class="p-8 flex items-center justify-center h-full text-gray-400">
                 Settings view is coming soon...

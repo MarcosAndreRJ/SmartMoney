@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { AdminService } from '../../core/services/admin.service';
 import { SupabaseService } from '../../core/services/supabase.service';
+import { NavigationService } from '../../core/services/navigation.service';
 import { Plan, Subscription } from '../../core/models/admin.models';
 
 interface PlanUI {
@@ -39,37 +40,42 @@ interface Invoice {
         </div>
 
         @if (userSubscription()) {
-          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 p-6">
-            <div class="flex items-center gap-6">
-              <div class="w-16 h-16 bg-emerald-100 rounded-2xl flex items-center justify-center">
-                <mat-icon class="text-3xl text-emerald-600">workspace_premium</mat-icon>
+          <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
+            <div class="flex">
+              <div class="w-1/2 bg-gradient-to-br from-emerald-400 to-emerald-500 p-8 flex flex-col justify-center items-center">
+                <div class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center mb-4">
+                  <mat-icon class="text-5xl text-white">workspace_premium</mat-icon>
+                </div>
+                <span class="text-white/80 text-sm font-medium">Seu Plano</span>
               </div>
-              <div class="flex-1">
-                <div class="flex items-center gap-2 mb-1">
+              <div class="w-1/2 p-8">
+                <div class="flex items-center gap-2 mb-2">
                   <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full uppercase tracking-wider">
                     {{ getStatusLabel() }}
                   </span>
                 </div>
-                <h2 class="text-xl font-bold text-slate-900">{{ currentPlanUI()?.name || 'Plano' }}</h2>
-                <p class="text-slate-500 text-sm mt-1">
+                <h2 class="text-2xl font-bold text-slate-900">{{ currentPlanUI()?.name || 'Plano' }}</h2>
+                <p class="text-slate-500 mt-2">
                   @if (userSubscription()?.end_date) {
-                    Próxima cobrança: {{ nextBillingDate() }} · 
+                    Próxima cobrança: {{ nextBillingDate() }}
                   }
+                </p>
+                <p class="text-2xl font-bold text-slate-900 mt-2">
                   {{ currentPlanUI()?.price || 'Grátis' }}
                 </p>
+                <div class="flex gap-3 mt-6">
+                  <button (click)="showInvoiceHistory.set(true)" class="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">
+                    <mat-icon class="text-lg">receipt_long</mat-icon>
+                    <span class="text-sm font-medium">Histórico de Faturas</span>
+                  </button>
+                  @if (userSubscription()?.status === 'active') {
+                    <button (click)="showCancelModal.set(true)" class="flex items-center gap-2 px-4 py-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors">
+                      <mat-icon class="text-lg">cancel</mat-icon>
+                      <span class="text-sm font-medium">Cancelar Assinatura</span>
+                    </button>
+                  }
+                </div>
               </div>
-            </div>
-            <div class="flex gap-4 mt-6 pt-6 border-t border-slate-100">
-              <button (click)="showInvoiceHistory.set(true)" class="flex items-center gap-2 px-4 py-2 text-slate-600 hover:text-slate-900 hover:bg-slate-50 rounded-xl transition-colors">
-                <mat-icon class="text-lg">receipt_long</mat-icon>
-                <span class="text-sm font-medium">Histórico de Faturas</span>
-              </button>
-              @if (userSubscription()?.status === 'active') {
-                <button (click)="showCancelModal.set(true)" class="flex items-center gap-2 px-4 py-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors ml-auto">
-                  <mat-icon class="text-lg">cancel</mat-icon>
-                  <span class="text-sm font-medium">Cancelar Assinatura</span>
-                </button>
-              }
             </div>
           </div>
         } @else {
@@ -87,30 +93,42 @@ interface Invoice {
         }
 
         <div>
-          <h3 class="text-lg font-bold text-slate-900 mb-4">Compare os Planos</h3>
+          <h3 class="text-lg font-bold text-slate-900 mb-4">Mudar de Plano</h3>
           <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
             @for (plan of plansUI(); track plan.id) {
               <div 
-                class="bg-white rounded-2xl p-6 transition-all"
+                class="bg-white rounded-2xl p-6 transition-all relative"
                 [class.border-2]="plan.recommended"
                 [class.border-emerald-500]="plan.recommended"
                 [class.shadow-lg]="plan.recommended"
                 [class.shadow-emerald-100]="plan.recommended"
                 [class.border]="!plan.recommended"
-                [class.border-slate-100]="!plan.recommended"
+                [class.border-slate-200]="!plan.recommended"
               >
                 @if (plan.recommended) {
-                  <span class="px-3 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full uppercase tracking-wider">Recomendado</span>
+                  <div class="absolute -top-3 left-1/2 -translate-x-1/2">
+                    <span class="px-4 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full uppercase tracking-wider">Recomendado</span>
+                  </div>
                 }
-                <h4 class="text-xl font-bold text-slate-900 mt-3">{{ plan.name }}</h4>
+                <h4 class="text-xl font-bold text-slate-900 mt-2">{{ plan.name }}</h4>
                 <div class="mt-4">
-                  <span class="text-3xl font-bold text-slate-900">{{ plan.price }}</span>
+                  <span class="text-3xl font-bold" 
+                    [class.text-slate-900]="!plan.recommended"
+                    [class.text-emerald-600]="plan.recommended">{{ plan.price }}</span>
                 </div>
                 <ul class="mt-6 space-y-3">
                   @for (feature of plan.features; track feature) {
-                    <li class="flex items-center gap-2 text-sm text-slate-600">
-                      <mat-icon class="text-emerald-500 text-lg">check_circle</mat-icon>
-                      {{ feature }}
+                    <li class="flex items-center gap-2 text-sm" 
+                      [class.text-slate-600]="!isLastFeature(plan.features, feature)"
+                      [class.text-slate-400]="isLastFeature(plan.features, feature)">
+                      <mat-icon class="text-lg" 
+                        [class.text-emerald-500]="!isLastFeature(plan.features, feature)"
+                        [class.text-slate-300]="isLastFeature(plan.features, feature)">
+                        {{ isLastFeature(plan.features, feature) ? 'close' : 'check_circle' }}
+                      </mat-icon>
+                      <span [class.line-through]="isLastFeature(plan.features, feature)">
+                        {{ feature }}
+                      </span>
                     </li>
                   }
                 </ul>
@@ -118,17 +136,20 @@ interface Invoice {
                   (click)="plan.action === 'current' ? null : openChangePlanModal(plan)"
                   [disabled]="plan.action === 'current'"
                   class="w-full mt-6 py-3 rounded-xl font-bold text-sm transition-all"
-                  [class.bg-slate-100]="plan.action === 'current'"
-                  [class.text-slate-400]="plan.action === 'current'"
+                  [class.bg-emerald-500]="plan.action === 'current'"
+                  [class.text-white]="plan.action === 'current'"
                   [class.cursor-not-allowed]="plan.action === 'current'"
                   [class.bg-emerald-500]="plan.action === 'upgrade'"
                   [class.text-white]="plan.action === 'upgrade'"
                   [class.hover:bg-emerald-600]="plan.action === 'upgrade'"
+                  [class.border]="plan.action === 'downgrade'"
+                  [class.border-slate-300]="plan.action === 'downgrade'"
+                  [class.text-slate-700]="plan.action === 'downgrade'"
                   [class.bg-slate-900]="plan.action === 'downgrade'"
                   [class.text-white]="plan.action === 'downgrade'"
                   [class.hover:bg-slate-800]="plan.action === 'downgrade'"
                 >
-                  {{ getButtonLabel(plan.action) }}
+                  {{ getButtonLabel(plan.action, plan.name) }}
                 </button>
               </div>
             }
@@ -225,6 +246,7 @@ interface Invoice {
 export class SubscriptionPageComponent implements OnInit {
   private adminService = inject(AdminService);
   private supabaseService = inject(SupabaseService);
+  private navService = inject(NavigationService);
 
   plans = signal<any[]>([]);
   userSubscription = signal<any>(null);
@@ -344,11 +366,15 @@ export class SubscriptionPageComponent implements OnInit {
     }
   }
 
-  getButtonLabel(action: string): string {
+  isLastFeature(features: string[], feature: string): boolean {
+    return features.indexOf(feature) === features.length - 1;
+  }
+
+  getButtonLabel(action: string, planName?: string): string {
     switch (action) {
       case 'current': return 'Plano Atual';
       case 'upgrade': return 'Upgrade';
-      case 'downgrade': return 'Downgrade';
+      case 'downgrade': return 'Mudar para ' + planName;
       default: return 'Selecionar';
     }
   }
@@ -374,46 +400,10 @@ export class SubscriptionPageComponent implements OnInit {
 
   async confirmChangePlan() {
     const selected = this.selectedPlan();
-    const user = await this.supabaseService.getUser();
-    if (!selected || !user) return;
+    if (!selected) return;
 
-    const currentSub = this.userSubscription();
-
-    try {
-      if (currentSub?.id) {
-        await this.adminService.updateSubscription(currentSub.id, {
-          plan_id: selected.id,
-          status: 'active'
-        });
-      } else {
-        const endDate = new Date();
-        endDate.setMonth(endDate.getMonth() + 1);
-        
-        await this.adminService.createSubscription({
-          user_id: user.id,
-          plan_id: selected.id,
-          status: 'active',
-          start_date: new Date().toISOString(),
-          end_date: endDate.toISOString(),
-          payment_gateway: 'manual'
-        });
-      }
-
-      const plansData = await this.adminService.getPlans();
-      const updatedPlan = plansData.find(p => p.id === selected.id);
-      
-      this.userSubscription.update(s => ({
-        ...s,
-        plan_id: selected.id,
-        plans: updatedPlan,
-        status: 'active'
-      }));
-
-      this.selectedPlan.set(null);
-      alert('Plano alterado para ' + selected.name + '!');
-    } catch (err) {
-      console.error('Error changing plan:', err);
-      alert('Erro ao alterar plano');
-    }
+    this.navService.selectedPlanId.set(selected.id);
+    this.navService.navigateTo('subscription-checkout');
+    this.selectedPlan.set(null);
   }
 }

@@ -40,7 +40,7 @@ export interface Subscription {
   status: 'active' | 'cancelled' | 'expired' | 'trial';
   start_date: string;
   end_date: string;
-  payment_gateway: 'pagarme' | 'stripe' | 'manual';
+  payment_gateway: 'pagarme' | 'stripe' | 'manual' | 'credit_card' | 'pix' | 'boleto';
   gateway_subscription_id?: string;
   created_at: string;
 }

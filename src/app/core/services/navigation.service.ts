@@ -3,6 +3,7 @@ import { Injectable, signal } from '@angular/core';
 export type AppView = 'dashboard' | 'accounts' | 'statement' | 'categories' | 'subcategories' | 'subcategory-form' |
     'profile' | 'goals' | 'goal-contributions' | 'contacts' | 'notifications' | 'shared-accounts' |
     'recurring' | 'budgets' | 'savings' | 'investments' | 'settings' | 'transactions' | 'all-transfers' | 'lancamentos' | 'loans' | 'data-management' | 'credit-cards' | 'subscription' |
+    'subscription-checkout' |
     'admin' | 'admin-dashboard' | 'admin-users' | 'admin-plans' | 'admin-subscriptions' | 'admin-transactions' | 'admin-notifications';
 
 @Injectable({
@@ -13,6 +14,7 @@ export class NavigationService {
     selectedCategoryId = signal<string | null>(null);
     selectedSubcategoryId = signal<string | null>(null);
     selectedAccountForStatement = signal<any>(null);
+    selectedPlanId = signal<string | null>(null);
 
     navigateTo(view: AppView, params?: { categoryId?: string, subcategoryId?: string, account?: any }) {
         console.log(`NavigationService: Navigating to ${view}`, params);
