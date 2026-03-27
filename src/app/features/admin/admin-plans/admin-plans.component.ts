@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { AdminService } from '../../../core/services/admin.service';
+import { NavigationService } from '../../../core/services/navigation.service';
 import { Plan } from '../../../core/models/admin.models';
 
 type PlanSlug = 'basic' | 'pro' | 'family';
@@ -88,9 +89,14 @@ const PLAN_PRESETS: Record<PlanSlug, Omit<PlanForm, 'price' | 'is_active'>> = {
   template: `
     <div class="p-8">
       <div class="flex justify-between items-center mb-8">
-        <div>
-          <h1 class="text-3xl font-bold text-slate-900">Gerenciar Planos</h1>
-          <p class="text-slate-500 mt-1">Crie e edite os planos de assinatura</p>
+        <div class="flex items-center gap-4">
+          <button (click)="navigateBack()" class="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors">
+            <mat-icon class="text-slate-600">arrow_back</mat-icon>
+          </button>
+          <div>
+            <h1 class="text-3xl font-bold text-slate-900">Gerenciar Planos</h1>
+            <p class="text-slate-500 mt-1">Crie e edite os planos de assinatura</p>
+          </div>
         </div>
         <button (click)="openCreateModal()"
                 class="px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors flex items-center gap-2">
@@ -273,6 +279,7 @@ const PLAN_PRESETS: Record<PlanSlug, Omit<PlanForm, 'price' | 'is_active'>> = {
 })
 export class AdminPlansComponent implements OnInit {
   private adminService = inject(AdminService);
+  private navSrv = inject(NavigationService);
 
   plans = signal<Plan[]>([]);
   showModal = signal(false);
@@ -297,6 +304,10 @@ export class AdminPlansComponent implements OnInit {
 
   async ngOnInit() {
     await this.loadPlans();
+  }
+
+  navigateBack() {
+    this.navSrv.navigateTo('admin-dashboard' as any);
   }
 
   async loadPlans() {

@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { AdminService } from '../../../core/services/admin.service';
+import { NavigationService } from '../../../core/services/navigation.service';
 import { GlobalTransaction } from '../../../core/models/admin.models';
 
 @Component({
@@ -12,9 +13,14 @@ import { GlobalTransaction } from '../../../core/models/admin.models';
   template: `
     <div class="p-8">
       <div class="flex justify-between items-center mb-8">
-        <div>
-          <h1 class="text-3xl font-bold text-slate-900">Transações Globais</h1>
-          <p class="text-slate-500 mt-1">Visualize todas as transações do sistema</p>
+        <div class="flex items-center gap-4">
+          <button (click)="navigateBack()" class="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors">
+            <mat-icon class="text-slate-600">arrow_back</mat-icon>
+          </button>
+          <div>
+            <h1 class="text-3xl font-bold text-slate-900">Transações Globais</h1>
+            <p class="text-slate-500 mt-1">Visualize todas as transações do sistema</p>
+          </div>
         </div>
         <button (click)="loadTransactions()" 
                 class="px-4 py-2 bg-slate-900 text-white rounded-lg hover:bg-slate-800 transition-colors flex items-center gap-2">
@@ -51,17 +57,18 @@ import { GlobalTransaction } from '../../../core/models/admin.models';
       <!-- Lista de Transações -->
       <div class="bg-white rounded-2xl shadow-sm border border-slate-100 overflow-hidden">
         <table class="w-full">
-          <thead class="bg-slate-50">
-            <tr>
-              <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Data</th>
-              <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Usuário</th>
-              <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Conta</th>
-              <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Descrição</th>
-              <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Categoria</th>
-              <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Tipo</th>
-              <th class="text-right px-6 py-4 text-xs font-bold text-slate-400 uppercase">Valor</th>
-            </tr>
-          </thead>
+            <thead class="bg-slate-50">
+              <tr>
+                <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Data</th>
+                <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Usuário</th>
+                <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Conta</th>
+                <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Descrição</th>
+                <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Categoria</th>
+                <th class="text-left px-6 py-4 text-xs font-bold text-slate-400 uppercase">Tipo</th>
+                <th class="text-right px-6 py-4 text-xs font-bold text-slate-400 uppercase">Valor</th>
+                <th class="text-right px-6 py-4 text-xs font-bold text-slate-400 uppercase">Ações</th>
+              </tr>
+            </thead>
           <tbody class="divide-y divide-slate-100">
             @for (tx of filteredTransactions(); track tx.id) {
               <tr class="hover:bg-slate-50">
@@ -94,10 +101,22 @@ import { GlobalTransaction } from '../../../core/models/admin.models';
                     {{ tx.type === 'expense' ? '-' : '+' }}R$ {{ tx.amount.toFixed(2) }}
                   </span>
                 </td>
+                <td class="px-6 py-4 text-right">
+                  @if (tx.status !== 'cancelled') {
+                    <button
+                      (click)="reverseTransaction(tx)"
+                      class="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
+                      title="Extornar transação">
+                      Extornar
+                    </button>
+                  } @else {
+                    <span class="text-xs text-slate-400">Extornada</span>
+                  }
+                </td>
               </tr>
             } @empty {
               <tr>
-                <td colspan="7" class="px-6 py-8 text-center text-slate-400">
+                <td colspan="8" class="px-6 py-8 text-center text-slate-400">
                   Nenhuma transação encontrada
                 </td>
               </tr>
@@ -110,6 +129,7 @@ import { GlobalTransaction } from '../../../core/models/admin.models';
 })
 export class AdminTransactionsComponent implements OnInit {
   private adminService = inject(AdminService);
+  private navSrv = inject(NavigationService);
   
   transactions = signal<GlobalTransaction[]>([]);
   filteredTransactions = signal<GlobalTransaction[]>([]);
@@ -117,6 +137,10 @@ export class AdminTransactionsComponent implements OnInit {
   searchQuery = '';
   typeFilter = 'all';
   statusFilter = 'all';
+  
+  navigateBack() {
+    this.navSrv.navigateTo('admin-dashboard' as any);
+  }
   
   async ngOnInit() {
     await this.loadTransactions();
@@ -173,5 +197,18 @@ export class AdminTransactionsComponent implements OnInit {
   formatDate(date: string | undefined): string {
     if (!date) return '-';
     return new Date(date).toLocaleDateString('pt-BR');
+  }
+
+  async reverseTransaction(tx: GlobalTransaction) {
+    if (!confirm(`Deseja extornar esta transação?\n\n"${tx.description}"\nValor: R$ ${tx.amount.toFixed(2)}`)) {
+      return;
+    }
+
+    const success = await this.adminService.reverseTransaction(tx);
+    if (success) {
+      await this.loadTransactions();
+    } else {
+      alert('Erro ao extornar transação');
+    }
   }
 }

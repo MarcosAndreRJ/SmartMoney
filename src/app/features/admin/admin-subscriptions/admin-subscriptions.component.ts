@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { AdminService } from '../../../core/services/admin.service';
+import { NavigationService } from '../../../core/services/navigation.service';
 import { Plan, Subscription, UserProfile } from '../../../core/models/admin.models';
 
 type SubscriptionTab = 'all' | 'active' | 'trial' | 'cancelled';
@@ -26,9 +27,14 @@ interface EditSubscriptionForm {
   template: `
     <div class="p-8">
       <div class="flex justify-between items-center mb-8">
-        <div>
-          <h1 class="text-3xl font-bold text-slate-900">Gerenciar Assinaturas</h1>
-          <p class="text-slate-500 mt-1">Controle o ciclo de vida dos usuarios e faturamento do sistema.</p>
+        <div class="flex items-center gap-4">
+          <button (click)="navigateBack()" class="w-10 h-10 flex items-center justify-center rounded-lg bg-slate-100 hover:bg-slate-200 transition-colors">
+            <mat-icon class="text-slate-600">arrow_back</mat-icon>
+          </button>
+          <div>
+            <h1 class="text-3xl font-bold text-slate-900">Gerenciar Assinaturas</h1>
+            <p class="text-slate-500 mt-1">Controle o ciclo de vida dos usuarios e faturamento do sistema.</p>
+          </div>
         </div>
         <button
           (click)="openCreateModal()"
@@ -345,6 +351,7 @@ interface EditSubscriptionForm {
 })
 export class AdminSubscriptionsComponent implements OnInit {
   private adminService = inject(AdminService);
+  private navSrv = inject(NavigationService);
 
   readonly pageSize = 10;
 
@@ -475,6 +482,10 @@ export class AdminSubscriptionsComponent implements OnInit {
         this.page.set(maxPage);
       }
     });
+  }
+
+  navigateBack() {
+    this.navSrv.navigateTo('admin-dashboard' as any);
   }
 
   async ngOnInit() {

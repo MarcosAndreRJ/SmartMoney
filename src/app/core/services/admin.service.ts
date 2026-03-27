@@ -391,7 +391,7 @@ export class AdminService {
       return []; 
     }
     
-    return (data || []).map(t => ({
+    const transactions = (data || []).map(t => ({
       id: t.id,
       user_id: t.user_id,
       user_email: t.profiles?.email,
@@ -406,6 +406,14 @@ export class AdminService {
       status: t.status || 'confirmed',
       created_at: t.created_at
     }));
+
+    return transactions.sort((a, b) => {
+      const nameA = (a.user_name || a.user_email || '').toLowerCase();
+      const nameB = (b.user_name || b.user_email || '').toLowerCase();
+      if (nameA < nameB) return -1;
+      if (nameA > nameB) return 1;
+      return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
+    });
   }
 
   async getUserStats(userId: string): Promise<{
@@ -430,5 +438,29 @@ export class AdminService {
       totalAccounts: accounts?.length || 0,
       totalBalance
     };
+  }
+
+  async reverseTransaction(transaction: GlobalTransaction): Promise<boolean> {
+    const reverseType = transaction.type === 'income' ? 'expense' : 'income';
+    
+    const { error } = await this.client
+      .from('transactions')
+      .insert([{
+        user_id: transaction.user_id,
+        account_id: transaction.account_id,
+        description: `Extorno: ${transaction.description}`,
+        amount: transaction.amount,
+        date: new Date().toISOString(),
+        category: transaction.category,
+        type: reverseType,
+        status: 'confirmed'
+      }]);
+    
+    if (error) {
+      console.error('Error reversing transaction:', error);
+      return false;
+    }
+    
+    return true;
   }
 }
