@@ -16,7 +16,7 @@ import { NavigationService } from '../../core/services/navigation.service';
       <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6 mb-8 mt-2">
         <div (click)="navigateTo('accounts')" class="cursor-pointer bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group overflow-hidden relative">
           <div class="flex justify-between items-start mb-4 relative z-10">
-            <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center text-emerald-600">
+            <div class="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600">
               <mat-icon>account_balance</mat-icon>
             </div>
             <span class="text-[10px] font-bold px-2 py-1 rounded-lg" 
@@ -26,7 +26,7 @@ import { NavigationService } from '../../core/services/navigation.service';
           </div>
           <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1 relative z-10">Saldo Total</p>
           <p class="text-2xl font-extrabold text-slate-900 relative z-10">{{ stats()?.stats?.totalBalance | currency:'BRL':'R$ ' }}</p>
-          <div class="absolute bottom-0 right-0 w-24 h-24 bg-emerald-500/5 rounded-full -mr-10 -mb-10 group-hover:scale-110 transition-transform"></div>
+          <div class="absolute bottom-0 right-0 w-24 h-24 bg-violet-500/10 rounded-full -mr-10 -mb-10 group-hover:scale-110 transition-transform"></div>
         </div>
 
         <!-- Gastos do Mês -->
@@ -46,9 +46,9 @@ import { NavigationService } from '../../core/services/navigation.service';
         </div>
 
         <!-- Saldo Previsto -->
-        <div class="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group overflow-hidden relative border-l-4 border-l-indigo-500">
+        <div class="bg-white rounded-[24px] p-6 border border-slate-100 shadow-sm hover:shadow-md transition-all group overflow-hidden relative border-l-4 border-l-violet-500">
           <div class="flex justify-between items-start mb-4 relative z-10">
-            <div class="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-600">
+            <div class="w-10 h-10 rounded-xl bg-violet-50 flex items-center justify-center text-violet-600">
               <mat-icon>event_available</mat-icon>
             </div>
           </div>
@@ -75,7 +75,7 @@ import { NavigationService } from '../../core/services/navigation.service';
                 <h2 class="text-lg font-bold text-slate-800">Resumo de Cartões</h2>
                 <p class="text-xs text-slate-400 font-medium">{{ stats()?.creditCards?.length || 0 }} Cartões Ativos</p>
             </div>
-            <button (click)="navigateTo('accounts')" class="text-xs font-bold text-indigo-600 hover:text-indigo-700 transition-colors uppercase tracking-wider px-3 py-1 bg-indigo-50 rounded-lg">Gerenciar</button>
+            <button (click)="navigateTo('accounts')" class="text-xs font-bold text-violet-600 hover:text-violet-700 transition-colors uppercase tracking-wider px-3 py-1 bg-violet-50 rounded-lg">Gerenciar</button>
         </div>
         
         <div class="flex gap-4 overflow-x-auto pb-4 scrollbar-hide px-2">
@@ -97,12 +97,12 @@ import { NavigationService } from '../../core/services/navigation.service';
                     </div>
 
                     <div class="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden mb-3">
-                        <div class="h-full bg-emerald-500 rounded-full" [style.width.%]="(card.currentBill / (card.limit || 1)) * 100"></div>
+                        <div class="h-full bg-violet-500 rounded-full" [style.width.%]="(card.currentBill / (card.limit || 1)) * 100"></div>
                     </div>
 
                     <div class="flex justify-between items-center text-[10px] font-bold uppercase tracking-tighter">
                         <span class="text-slate-400">Limite R$ {{ card.limit | number:'1.0-0' }}</span>
-                        <span class="text-emerald-500">Disponível R$ {{ card.available | number:'1.0-0' }}</span>
+                        <span class="text-violet-600">Disponível R$ {{ card.available | number:'1.0-0' }}</span>
                     </div>
                 </div>
             } @empty {
@@ -127,7 +127,7 @@ import { NavigationService } from '../../core/services/navigation.service';
 
                 <div class="flex items-center gap-4 mb-8">
                     <div class="flex items-center gap-2">
-                        <div class="w-3 h-3 rounded-full bg-emerald-500"></div>
+                        <div class="w-3 h-3 rounded-full bg-violet-500"></div>
                         <span class="text-[10px] font-bold text-slate-500 uppercase">Receitas Fixas</span>
                     </div>
                     <div class="flex items-center gap-2">
@@ -138,7 +138,7 @@ import { NavigationService } from '../../core/services/navigation.service';
 
                 <!-- Recurrence Bar Chart (SVG styling) -->
                 <div class="w-full h-12 bg-slate-50 rounded-xl overflow-hidden flex mb-8">
-                    <div class="h-full bg-emerald-500 flex items-center px-4 text-white text-[10px] font-bold" [style.width.%]="(stats()?.recurrence?.income / ((stats()?.recurrence?.income + stats()?.recurrence?.expenses) || 1)) * 100">
+                    <div class="h-full bg-violet-500 flex items-center px-4 text-white text-[10px] font-bold" [style.width.%]="(stats()?.recurrence?.income / ((stats()?.recurrence?.income + stats()?.recurrence?.expenses) || 1)) * 100">
                         Receitas: R$ {{ stats()?.recurrence?.income | number:'1.0-0' }}
                     </div>
                     <div class="h-full bg-red-400 flex items-center justify-end px-4 text-white text-[10px] font-bold" [style.width.%]="(stats()?.recurrence?.expenses / ((stats()?.recurrence?.income + stats()?.recurrence?.expenses) || 1)) * 100">
@@ -147,9 +147,9 @@ import { NavigationService } from '../../core/services/navigation.service';
                 </div>
 
                 <div class="grid grid-cols-2 gap-4">
-                    <div class="bg-emerald-50/30 p-4 rounded-2xl border border-emerald-50">
-                        <p class="text-[10px] font-bold text-emerald-600 uppercase mb-1">Receitas Fixas</p>
-                        <p class="text-lg font-extrabold text-emerald-700">{{ stats()?.recurrence?.income | currency:'BRL':'R$ ' }}</p>
+                    <div class="bg-violet-50/40 p-4 rounded-2xl border border-violet-100">
+                        <p class="text-[10px] font-bold text-violet-700 uppercase mb-1">Receitas Fixas</p>
+                        <p class="text-lg font-extrabold text-violet-800">{{ stats()?.recurrence?.income | currency:'BRL':'R$ ' }}</p>
                     </div>
                     <div class="bg-red-50/30 p-4 rounded-2xl border border-red-50">
                         <p class="text-[10px] font-bold text-red-600 uppercase mb-1">Despesas Fixas</p>
@@ -159,11 +159,11 @@ import { NavigationService } from '../../core/services/navigation.service';
             </div>
 
             <div class="w-full md:w-56 border-t md:border-t-0 md:border-l border-slate-100 flex flex-col items-center justify-center text-center p-4">
-                <div class="w-16 h-16 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 mb-4 shadow-sm">
+                <div class="w-16 h-16 rounded-full bg-violet-50 flex items-center justify-center text-violet-600 mb-4 shadow-sm">
                     <mat-icon class="text-3xl">savings</mat-icon>
                 </div>
                 <p class="text-[11px] font-bold text-slate-400 uppercase tracking-widest mb-1">Saldo Recorrente Livre</p>
-                <p class="text-2xl font-extrabold text-emerald-600 mb-2">{{ (stats()?.recurrence?.income - stats()?.recurrence?.expenses) | currency:'BRL':'R$ ' }}</p>
+                <p class="text-2xl font-extrabold text-violet-600 mb-2">{{ (stats()?.recurrence?.income - stats()?.recurrence?.expenses) | currency:'BRL':'R$ ' }}</p>
                 <p class="text-[10px] text-slate-400 leading-relaxed font-medium">Este é o valor garantido que sobra após suas contas fixas.</p>
             </div>
         </div>
@@ -172,7 +172,7 @@ import { NavigationService } from '../../core/services/navigation.service';
         <div class="bg-white rounded-[32px] p-6 border border-slate-100 shadow-sm">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-lg font-bold text-slate-800">Minhas Metas</h3>
-                <button (click)="navigateTo('goals')" class="text-[10px] font-bold text-indigo-600 uppercase hover:underline">Ver todas</button>
+                <button (click)="navigateTo('goals')" class="text-[10px] font-bold text-violet-600 uppercase hover:underline">Ver todas</button>
             </div>
 
             <div class="space-y-4">
@@ -208,9 +208,9 @@ import { NavigationService } from '../../core/services/navigation.service';
       <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-10">
         
         <!-- 5. Evolução de Patrimônio (Chart) -->
-        <div class="lg:col-span-2 bg-[#0F172A] rounded-[32px] p-8 shadow-xl relative overflow-hidden flex flex-col group min-h-[400px]">
+        <div class="lg:col-span-2 bg-gradient-to-br from-[#4C1D95] via-[#6D28D9] to-[#1D4ED8] rounded-[32px] p-8 shadow-xl relative overflow-hidden flex flex-col group min-h-[400px]">
             <!-- Decorative circle -->
-            <div class="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl -mr-32 -mt-32"></div>
+            <div class="absolute top-0 right-0 w-64 h-64 bg-fuchsia-300/20 rounded-full blur-3xl -mr-32 -mt-32"></div>
 
             <div class="flex justify-between items-start mb-10 relative z-10">
                 <div>
@@ -297,7 +297,7 @@ import { NavigationService } from '../../core/services/navigation.service';
       <div class="bg-white rounded-[32px] p-8 border border-slate-100 shadow-sm">
         <div class="flex justify-between items-center mb-8">
             <h3 class="text-lg font-bold text-slate-800">Últimas Transações</h3>
-            <button (click)="navigateTo('lancamentos')" class="text-[10px] font-bold text-indigo-600 uppercase hover:underline">Ver Extrato Completo</button>
+            <button (click)="navigateTo('lancamentos')" class="text-[10px] font-bold text-violet-600 uppercase hover:underline">Ver Extrato Completo</button>
         </div>
 
         <div class="overflow-x-auto">
@@ -315,7 +315,7 @@ import { NavigationService } from '../../core/services/navigation.service';
                         <tr class="group hover:bg-slate-50/50 transition-colors">
                             <td class="py-5 px-2 text-[12px] font-medium text-slate-500">{{ tx.date | date:'dd MMM, yyyy':'UTC' }}</td>
                             <td class="py-5 px-2">
-                                <span class="text-[13px] font-bold text-slate-900 leading-none group-hover:text-indigo-600 transition-colors">{{ tx.description }}</span>
+                                <span class="text-[13px] font-bold text-slate-900 leading-none group-hover:text-violet-600 transition-colors">{{ tx.description }}</span>
                             </td>
                             <td class="py-5 px-2">
                                 <span class="px-3 py-1 rounded-lg text-[10px] font-extrabold tracking-widest uppercase"

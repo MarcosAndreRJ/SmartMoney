@@ -60,7 +60,7 @@ interface Invoice {
                     </div>
                   }
                 </div>
-                <h2 class="text-3xl font-bold text-slate-900 mb-6">{{ currentPlanUI()?.name || 'SmartMoney PRO' }}</h2>
+                <h2 class="text-3xl font-bold text-slate-900 mb-6">{{ currentPlanUI()?.name || 'SmartKonta PRO' }}</h2>
                 
                 <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
                   <div class="flex items-center gap-2">

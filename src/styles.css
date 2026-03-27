@@ -1,13 +1,58 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/icon?family=Material+Icons');
 @import "tailwindcss";
 
 @theme {
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+}
+
+:root {
+  --brand-primary: #6c2bd9;
+  --brand-secondary: #8b5cf6;
+  --brand-accent: #0ea5e9;
+  --brand-primary-dark: #5b21b6;
+  --brand-surface: #ffffff;
+  --brand-surface-muted: #f5f3ff;
+  --brand-bg: #f8f9fc;
+  --text-primary: #0f172a;
+  --text-muted: #64748b;
+  --success: #10b981;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --brand-gradient-main: linear-gradient(135deg, #6c2bd9 0%, #a855f7 55%, #d946ef 100%);
+  --brand-gradient-cool: linear-gradient(135deg, #1d4ed8 0%, #0ea5e9 100%);
 }
 
 body {
-  @apply bg-[#F8F9FA] text-slate-800 font-sans antialiased;
+  @apply bg-[#F8F9FC] text-slate-800 font-sans antialiased;
+}
+
+.btn-brand {
+  background: var(--brand-gradient-main);
+  @apply text-white font-bold rounded-xl shadow-lg shadow-purple-200/60 transition-all;
+}
+
+.btn-brand:hover {
+  @apply brightness-105 -translate-y-[1px];
+}
+
+.input-brand {
+  @apply w-full h-12 px-4 rounded-xl border border-slate-200 bg-white text-slate-700 outline-none transition-all;
+}
+
+.input-brand:focus {
+  border-color: var(--brand-secondary);
+  box-shadow: 0 0 0 3px rgba(139, 92, 246, 0.18);
+}
+
+.chip-brand {
+  @apply px-2.5 py-1 rounded-full text-xs font-bold;
+  color: var(--brand-primary-dark);
+  background: #ede9fe;
+}
+
+.card-brand {
+  @apply bg-white rounded-2xl border border-slate-100 shadow-sm;
 }
 
 /* Fix for Angular Material Menu Background */

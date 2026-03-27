@@ -16,7 +16,7 @@ import { NavigationService } from '../../core/services/navigation.service';
           <button (click)="navigateTo('admin-dashboard')" class="text-left w-full">
             <h1 class="text-xl font-bold flex items-center gap-2">
               <mat-icon class="text-emerald-400">admin_panel_settings</mat-icon>
-              SmartMoney Admin
+              SmartKonta Admin
             </h1>
             <p class="text-xs text-slate-400 mt-1">Painel de Administração</p>
           </button>

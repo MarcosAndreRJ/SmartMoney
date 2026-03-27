@@ -8,14 +8,12 @@ import { AdminService } from '../core/services/admin.service';
   standalone: true,
   imports: [MatIconModule],
   template: `
-    <aside class="w-64 h-screen bg-[#F8F9FA] border-r border-gray-200 flex flex-col fixed left-0 top-0 z-30">
+    <aside class="w-64 h-screen bg-white border-r border-slate-200 flex flex-col fixed left-0 top-0 z-30">
       <!-- Logo -->
-      <div class="p-6 flex items-center gap-3">
-        <div class="w-10 h-10 bg-[#1A1F2C] rounded-xl flex items-center justify-center text-white">
-          <mat-icon class="text-xl">account_balance_wallet</mat-icon>
-        </div>
+      <div class="p-6 flex items-center gap-3 border-b border-slate-100">
+        <img src="/assets/logo-smartkonta.png" alt="SmartKonta" class="w-9 h-9 object-contain" />
         <div>
-          <h1 class="font-bold text-lg leading-tight text-slate-900 uppercase tracking-tight">SMARTMONEY</h1>
+          <h1 class="font-extrabold text-[1.35rem] leading-tight text-transparent bg-clip-text bg-gradient-to-r from-[#2563EB] to-[#A21CAF]">SmartKonta</h1>
           <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Premium Account</p>
         </div>
       </div>
@@ -26,11 +24,11 @@ import { AdminService } from '../core/services/admin.service';
           <a href="#" 
              (click)="onNavigate(item.id, $event)"
              class="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium transition-colors"
-             [class.bg-[#EAECEF]]="currentView() === item.id"
-             [class.text-slate-900]="currentView() === item.id"
+             [class.bg-[#F4EFFF]]="currentView() === item.id"
+             [class.text-[#6C2BD9]]="currentView() === item.id"
              [class.text-slate-500]="currentView() !== item.id"
-             [class.hover:bg-gray-100]="currentView() !== item.id">
-            <mat-icon class="text-xl" [class.text-slate-900]="currentView() === item.id">{{ item.icon }}</mat-icon>
+             [class.hover:bg-[#F8F5FF]]="currentView() !== item.id">
+            <mat-icon class="text-xl" [class.text-[#6C2BD9]]="currentView() === item.id">{{ item.icon }}</mat-icon>
             {{ item.label }}
           </a>
         }
@@ -56,7 +54,7 @@ import { AdminService } from '../core/services/admin.service';
 
       <!-- Add Transaction Button -->
       <div class="px-4 py-6 text-center">
-        <button class="w-full py-3.5 bg-[#0B1120] text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg shadow-slate-200 flex items-center justify-center gap-2">
+        <button class="w-full py-3.5 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-purple-200 flex items-center justify-center gap-2 bg-gradient-to-r from-[#6C2BD9] via-[#9333EA] to-[#A21CAF] hover:brightness-105">
           <mat-icon class="text-lg">add_circle</mat-icon>
           Adicionar Transação
         </button>
@@ -78,7 +76,7 @@ export class SidebarComponent implements OnInit {
     { id: 'lancamentos', icon: 'receipt_long', label: 'Transações' },
     { id: 'categories', icon: 'category', label: 'Categorias' },
     { id: 'recurring', icon: 'event_repeat', label: 'Recorrente' },
-    { id: 'savings', icon: 'savings', label: 'Poupança' },
+    // { id: 'savings', icon: 'savings', label: 'Poupança' },
     { id: 'goals', icon: 'track_changes', label: 'Metas' },
     { id: 'shared-accounts', icon: 'group', label: 'Contas Compartilhadas' },
     { id: 'investments', icon: 'trending_up', label: 'Investimentos' },

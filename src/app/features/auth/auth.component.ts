@@ -9,98 +9,107 @@ import { MatIconModule } from '@angular/material/icon';
     standalone: true,
     imports: [CommonModule, FormsModule, MatIconModule],
     template: `
-    <div class="min-h-screen flex items-center justify-center bg-[#F8F9FA] p-4">
-      <div class="max-w-md w-full bg-white rounded-3xl shadow-xl border border-gray-100 p-8 space-y-8">
-        
-        @if (successMessage()) {
-          <div class="text-center space-y-6 animate-in fade-in zoom-in duration-300">
-            <div class="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto">
-              <mat-icon class="text-5xl w-auto h-auto">mark_email_read</mat-icon>
-            </div>
-            <div class="space-y-2">
-              <h2 class="text-2xl font-bold text-gray-900">Check your inbox!</h2>
-              <p class="text-gray-500">We've sent a confirmation link to <strong>{{ email }}</strong>. Please verify your email to continue.</p>
-            </div>
-            <button 
-              (click)="successMessage.set(false); isSignUp.set(false)"
-              class="w-full h-12 border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-all"
-            >
-              Back to Sign In
-            </button>
+    <div class="min-h-screen bg-[#F8F9FC]">
+      <div class="min-h-screen grid lg:grid-cols-2">
+        <section class="hidden lg:flex relative overflow-hidden bg-gradient-to-b from-[#860ED8] via-[#8D22D8] to-[#7C7CE4] text-white p-12 items-end">
+          <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(255,255,255,0.18),transparent_42%)]"></div>
+          <div class="absolute -bottom-14 -right-12 w-80 h-80 rounded-full bg-white/10 blur-3xl"></div>
+          <div class="relative max-w-md">
+            <img src="/assets/logo-smartkonta.png" alt="SmartKonta" class="w-16 h-16 object-contain mb-10" />
+            <h2 class="text-5xl leading-tight font-extrabold">Comece a sua jornada com a SmartKonta</h2>
+            <p class="mt-6 text-xl text-white/90 leading-relaxed">Junte-se a nos para atingir seus objetivos financeiros de forma rapida, segura e com uma experiencia totalmente digital e premium.</p>
           </div>
-        } @else {
-          <div class="text-center space-y-2">
-            <div class="w-16 h-16 bg-[#1A1F2C] rounded-2xl flex items-center justify-center mx-auto mb-4">
-              <mat-icon class="text-white text-3xl w-auto h-auto">account_balance</mat-icon>
-            </div>
-            <h1 class="text-2xl font-bold text-gray-900">Welcome to SmartMoney</h1>
-            <p class="text-gray-500">{{ isSignUp() ? 'Create your account to start' : 'Sign in to manage your finances' }}</p>
-          </div>
+        </section>
 
-          <form (ngSubmit)="handleAuth()" class="space-y-5">
-            @if (isSignUp()) {
-              <div class="space-y-2">
-                <label for="fullName" class="text-sm font-semibold text-gray-700">Full Name</label>
-                <input 
-                  id="fullName"
-                  type="text" 
-                  [(ngModel)]="fullName" 
-                  name="fullName"
-                  class="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-[#1A1F2C] outline-none transition-all"
-                  placeholder="Alex Thompson"
-                  required
+        <section class="flex items-center justify-center p-4 md:p-10">
+          <div class="w-full max-w-md bg-white rounded-3xl border border-slate-200 shadow-xl shadow-slate-200/70 p-8">
+            @if (successMessage()) {
+              <div class="text-center space-y-6 animate-in fade-in zoom-in duration-300">
+                <div class="w-20 h-20 bg-emerald-50 text-emerald-500 rounded-full flex items-center justify-center mx-auto">
+                  <mat-icon class="text-5xl w-auto h-auto">mark_email_read</mat-icon>
+                </div>
+                <div class="space-y-2">
+                  <h2 class="text-2xl font-bold text-gray-900">Verifique seu e-mail</h2>
+                  <p class="text-gray-500">Enviamos um link de confirmacao para <strong>{{ email }}</strong>.</p>
+                </div>
+                <button
+                  (click)="successMessage.set(false); isSignUp.set(false)"
+                  class="w-full h-12 border border-gray-200 text-gray-700 rounded-xl font-bold hover:bg-gray-50 transition-all"
                 >
+                  Voltar para entrar
+                </button>
+              </div>
+            } @else {
+              <div class="mb-8">
+                <div class="flex items-center gap-3 mb-6 lg:hidden">
+                  <img src="/assets/logo-smartkonta.png" alt="SmartKonta" class="w-9 h-9 object-contain" />
+                  <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#2563EB] to-[#A21CAF]">SmartKonta</h1>
+                </div>
+
+                <h2 class="text-4xl font-extrabold text-slate-900 leading-tight">Bem-vindo de volta!</h2>
+                <p class="text-slate-500 mt-3 text-lg">Por favor, insira seus detalhes para entrar na sua SmartKonta.</p>
+              </div>
+
+              <button
+                (click)="signInWithGoogle()"
+                class="w-full h-12 border border-slate-200 text-slate-800 rounded-xl font-bold hover:bg-slate-50 transition-all flex items-center justify-center gap-3"
+              >
+                <span class="w-6 h-6 rounded-full bg-white border border-slate-200 text-[13px] grid place-items-center">G</span>
+                Entrar com Google
+              </button>
+
+              <div class="my-6 flex items-center gap-4 text-slate-400 text-sm">
+                <div class="h-px flex-1 bg-slate-200"></div>
+                <span>ou entrar com e-mail</span>
+                <div class="h-px flex-1 bg-slate-200"></div>
+              </div>
+
+              <form (ngSubmit)="handleAuth()" class="space-y-5">
+                @if (isSignUp()) {
+                  <div class="space-y-2">
+                    <label for="fullName" class="text-sm font-semibold text-slate-700">Nome completo</label>
+                    <input id="fullName" type="text" [(ngModel)]="fullName" name="fullName" class="input-brand" placeholder="Alex Thompson" required>
+                  </div>
+                }
+
+                <div class="space-y-2">
+                  <label for="email" class="text-sm font-semibold text-slate-700">E-mail</label>
+                  <input id="email" type="email" [(ngModel)]="email" name="email" class="input-brand" placeholder="alex@example.com" required>
+                </div>
+
+                <div class="space-y-2">
+                  <label for="password" class="text-sm font-semibold text-slate-700">Senha</label>
+                  <input id="password" type="password" [(ngModel)]="password" name="password" class="input-brand" placeholder="Digite sua senha" required>
+                </div>
+
+                <div class="flex items-center justify-between text-sm text-slate-500">
+                  <label class="inline-flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" [(ngModel)]="rememberMe" name="rememberMe" class="accent-[#7C3AED]">
+                    Lembrar-me
+                  </label>
+                  <button type="button" class="font-semibold text-[#7C3AED] hover:text-[#6C2BD9]">Esqueceu a senha?</button>
+                </div>
+
+                @if (error()) {
+                  <p class="text-red-500 text-sm text-center bg-red-50 py-2 rounded-lg">{{ error() }}</p>
+                }
+
+                <button type="submit" [disabled]="loading()" class="w-full h-12 btn-brand disabled:opacity-50">
+                  {{ loading() ? 'Processando...' : (isSignUp() ? 'Criar conta' : 'Entrar') }}
+                </button>
+              </form>
+
+              <div class="text-center mt-6">
+                <button
+                  (click)="isSignUp.set(!isSignUp()); error.set(null)"
+                  class="text-sm text-slate-500 hover:text-slate-900 transition-colors"
+                >
+                  {{ isSignUp() ? 'Ja tem uma conta? Entrar' : 'Nao tem uma conta? Cadastre-se gratis' }}
+                </button>
               </div>
             }
-
-            <div class="space-y-2">
-              <label for="email" class="text-sm font-semibold text-gray-700">Email Address</label>
-              <input 
-                id="email"
-                type="email" 
-                [(ngModel)]="email" 
-                name="email"
-                class="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-[#1A1F2C] outline-none transition-all"
-                placeholder="alex@example.com"
-                required
-              >
-            </div>
-
-            <div class="space-y-2">
-              <label for="password" class="text-sm font-semibold text-gray-700">Password</label>
-              <input 
-                id="password"
-                type="password" 
-                [(ngModel)]="password" 
-                name="password"
-                class="w-full h-12 px-4 rounded-xl border border-gray-200 focus:border-[#1A1F2C] outline-none transition-all"
-                placeholder="••••••••"
-                required
-              >
-            </div>
-
-            @if (error()) {
-              <p class="text-red-500 text-sm text-center bg-red-50 py-2 rounded-lg">{{ error() }}</p>
-            }
-
-            <button 
-              type="submit" 
-              [disabled]="loading()"
-              class="w-full h-12 bg-[#1A1F2C] text-white rounded-xl font-bold hover:bg-gray-800 transition-all disabled:opacity-50 shadow-lg shadow-gray-200"
-            >
-              {{ loading() ? 'Processing...' : (isSignUp() ? 'Create Account' : 'Sign In') }}
-            </button>
-          </form>
-
-          <div class="text-center">
-            <button 
-              (click)="isSignUp.set(!isSignUp()); error.set(null)" 
-              class="text-sm text-gray-500 hover:text-gray-900 transition-colors"
-            >
-              {{ isSignUp() ? 'Already have an account? Sign In' : "Don't have an account? Sign Up" }}
-            </button>
           </div>
-        }
+        </section>
       </div>
     </div>
   `
@@ -115,6 +124,20 @@ export class AuthComponent {
     isSignUp = signal(false);
     successMessage = signal(false);
     error = signal<string | null>(null);
+    rememberMe = false;
+
+    async signInWithGoogle() {
+        this.error.set(null);
+        const { error } = await this.supabase.client.auth.signInWithOAuth({
+            provider: 'google',
+            options: {
+                redirectTo: window.location.origin
+            }
+        });
+        if (error) {
+            this.error.set(error.message);
+        }
+    }
 
     async handleAuth() {
         this.loading.set(true);

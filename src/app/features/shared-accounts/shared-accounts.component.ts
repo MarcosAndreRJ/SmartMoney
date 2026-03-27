@@ -118,7 +118,7 @@ import { ConfirmModalComponent } from '../../shared/components/confirm-modal.com
                   </div>
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2">
-                      <p class="font-bold text-slate-900">{{ member.profiles?.full_name || 'Usuário SmartMoney' }}</p>
+                      <p class="font-bold text-slate-900">{{ member.profiles?.full_name || 'Usuário SmartKonta' }}</p>
                       @if (isCurrentUser(member.user_id)) {
                         <span class="px-1.5 py-0.5 bg-slate-900 text-white text-[9px] font-bold rounded uppercase tracking-wider">VOCÊ</span>
                       }

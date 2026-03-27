@@ -46,7 +46,7 @@ import { MatIconModule } from '@angular/material/icon';
           <!-- Footer/Brand -->
           <div class="mt-8 flex items-center gap-2 text-[10px] font-bold text-slate-300 uppercase tracking-[0.2em]">
             <mat-icon class="text-[14px] w-[14px] h-[14px]">verified_user</mat-icon>
-            SmartMoney Secure
+            SmartKonta Secure
           </div>
         </div>
 

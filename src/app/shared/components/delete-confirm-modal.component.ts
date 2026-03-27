@@ -51,7 +51,7 @@ import { MatIconModule } from '@angular/material/icon';
 })
 export class DeleteConfirmModalComponent {
     title = input<string>('Confirmar Exclusão');
-    message = input<string>('Tem certeza que deseja excluir este item? Esta ação não poderá ser desfeita e os dados serão removidos permanentemente da sua conta SmartMoney.');
+    message = input<string>('Tem certeza que deseja excluir este item? Esta ação não poderá ser desfeita e os dados serão removidos permanentemente da sua conta SmartKonta.');
 
     confirm = output<void>();
     cancel = output<void>();

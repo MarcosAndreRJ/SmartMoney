@@ -62,7 +62,7 @@ export const financialInfoValidator: ValidatorFn = (control: AbstractControl): V
                   </div>
                 }
               </div>
-              <p class="text-[10px] text-slate-400 px-1 italic">Dica: Se o contato já usa o SmartMoney, os dados serão puxados automaticamente.</p>
+              <p class="text-[10px] text-slate-400 px-1 italic">Dica: Se o contato já usa o SmartKonta, os dados serão puxados automaticamente.</p>
             </div>
 
             <!-- Name -->

@@ -11,10 +11,10 @@ import { AdminService } from '../core/services/admin.service';
   standalone: true,
   imports: [MatIconModule, CommonModule],
   template: `
-    <header class="h-16 bg-white border-b border-gray-100 flex items-center justify-between px-8 sticky top-0 z-20">
+    <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-8 sticky top-0 z-20">
       <!-- Search -->
       <div class="flex-1 max-w-xl">
-        <div class="relative flex items-center w-full h-10 rounded-2xl bg-[#F1F3F6] overflow-hidden">
+        <div class="relative flex items-center w-full h-10 rounded-2xl bg-[#F6F4FF] border border-[#ECE8FF] overflow-hidden">
           <div class="grid place-items-center h-full w-12 text-slate-400">
             <mat-icon class="text-xl">search</mat-icon>
           </div>
@@ -22,7 +22,7 @@ import { AdminService } from '../core/services/admin.service';
             class="peer h-full w-full outline-none text-sm text-slate-600 pr-2 bg-transparent placeholder-slate-400"
             type="text"
             id="search"
-            placeholder="Search transactions, reports..." />
+            placeholder="Buscar transacoes, relatorios..." />
         </div>
       </div>
 
@@ -120,7 +120,7 @@ import { AdminService } from '../core/services/admin.service';
               <p class="text-sm font-bold text-slate-900 group-hover:text-slate-600 transition-colors flex items-center gap-2">
                 {{ supabase.currentUserProfile()?.name || 'Carregando...' }}
                 @if (isAdmin()) {
-                  <span class="px-2 py-0.5 bg-purple-100 text-purple-700 text-[10px] font-bold rounded-full">ADMIN</span>
+                  <span class="px-2 py-0.5 bg-[#F1E8FF] text-[#6C2BD9] text-[10px] font-bold rounded-full">ADMIN</span>
                 }
               </p>
               <p class="text-[11px] text-slate-400 truncate max-w-[150px]">{{ supabase.currentUserProfile()?.email }}</p>

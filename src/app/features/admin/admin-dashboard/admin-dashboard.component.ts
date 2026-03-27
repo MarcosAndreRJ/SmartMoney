@@ -13,7 +13,7 @@ import { NavigationService } from '../../../core/services/navigation.service';
     <div class="p-8">
       <div class="mb-8">
         <h1 class="text-3xl font-bold text-slate-900">Dashboard Admin</h1>
-        <p class="text-slate-500 mt-1">Visão geral do sistema SmartMoney</p>
+        <p class="text-slate-500 mt-1">Visão geral do sistema SmartKonta</p>
       </div>
       
       @if (loading()) {
