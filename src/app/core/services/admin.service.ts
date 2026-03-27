@@ -40,23 +40,20 @@ export class AdminService {
   }
 
   async getAllUsers(): Promise<UserProfile[]> {
-    // Buscar de auth.users (Opção B) - usar raw_user_meta_data
-    const { data, error } = await this.client
-      .from('auth.users')
-      .select('id, email, created_at, raw_user_meta_data, email_confirmed_at')
-      .order('created_at', { ascending: false });
+    // Buscar de auth.users via RPC (não funciona via client direct)
+    const { data, error } = await this.client.rpc('get_all_users');
     
     if (error) { 
       console.error('Error fetching users:', error); 
       return []; 
     }
     
-    return (data || []).map(u => ({
+    return (data || []).map((u: any) => ({
       id: u.id,
-      name: u.raw_user_meta_data?.['full_name'] || u.email?.split('@')[0] || '',
+      name: u.full_name || u.email?.split('@')[0] || '',
       email: u.email || '',
-      avatar: u.raw_user_meta_data?.['avatar_url'],
-      role: u.raw_user_meta_data?.['role'] || 'user',
+      avatar: u.avatar_url,
+      role: u.role || 'user',
       created_at: u.created_at
     }));
   }
@@ -68,6 +65,25 @@ export class AdminService {
     });
     
     return !error;
+  }
+
+  async createUserWithEmail(email: string, password: string, metadata: any = {}): Promise<{ data: any; error: string | null }> {
+    try {
+      const { data, error } = await this.client.auth.admin.createUser({
+        email,
+        password,
+        email_confirm: true,
+        user_metadata: metadata
+      });
+      
+      if (error) {
+        return { data: null, error: error.message };
+      }
+      
+      return { data, error: null };
+    } catch (e: any) {
+      return { data: null, error: e.message };
+    }
   }
 
   async updateUserProfile(userId: string, updates: Partial<UserProfile>): Promise<boolean> {
@@ -91,17 +107,47 @@ export class AdminService {
   }
 
   async getPlans(): Promise<Plan[]> {
-    const { data } = await this.client
+    // Debug: check current user
+    const { data: { user } } = await this.client.auth.getUser();
+    console.log('Current user:', user);
+    console.log('User metadata:', user?.user_metadata);
+    console.log('App metadata:', user?.app_metadata);
+    
+    const { data, error } = await this.client
       .from('plans')
       .select('*')
       .order('price', { ascending: true });
+
+    if (error) {
+      console.error('Error fetching plans:', error);
+      return [];
+    }
+    console.log('Plans data from Supabase:', data);
+
+    const defaultResources = {
+      account_transfers: false,
+      goals: false,
+      loans: false,
+      investments: false,
+      whatsapp_entries: false,
+      shared_accounts: false
+    };
+
     return (data || []).map(p => ({
       id: p.id,
+      slug: p.slug,
       name: p.name,
       description: p.description,
       price: Number(p.price),
       features: p.features || [],
-      limits: p.limits || { transactions: 1000, accounts: 10 },
+      restrictions: p.restrictions || {
+        max_accounts: p.limits?.accounts ?? null,
+        max_cards: null
+      },
+      resources: {
+        ...defaultResources,
+        ...(p.resources || {})
+      },
       is_active: p.is_active,
       created_at: p.created_at
     }));
@@ -111,11 +157,13 @@ export class AdminService {
     const { error } = await this.client
       .from('plans')
       .insert([{
+        slug: plan.slug,
         name: plan.name,
         description: plan.description,
         price: plan.price,
         features: plan.features,
-        limits: plan.limits,
+        restrictions: plan.restrictions,
+        resources: plan.resources,
         is_active: plan.is_active ?? true
       }]);
     return !error;
@@ -125,11 +173,13 @@ export class AdminService {
     const { error } = await this.client
       .from('plans')
       .update({
+        slug: updates.slug,
         name: updates.name,
         description: updates.description,
         price: updates.price,
         features: updates.features,
-        limits: updates.limits,
+        restrictions: updates.restrictions,
+        resources: updates.resources,
         is_active: updates.is_active
       })
       .eq('id', id);
@@ -305,14 +355,15 @@ export class AdminService {
   }
 
   async sendBroadcastNotification(notification: Partial<SystemNotification>): Promise<number> {
-    // Buscar todos os usuários de auth.users (Opção B)
-    const { data: users } = await this.client
-      .from('auth.users')
-      .select('id');
+    // Buscar todos os usuários via RPC
+    const { data: users, error } = await this.client.rpc('get_all_users');
     
-    if (!users || users.length === 0) return 0;
+    if (error || !users || users.length === 0) {
+      console.error('Error fetching users for broadcast:', error);
+      return 0;
+    }
     
-    return this.sendBulkNotification(users.map(u => u.id), notification);
+    return this.sendBulkNotification(users.map((u: any) => u.id), notification);
   }
 
   async getNotificationHistory(userId?: string): Promise<SystemNotification[]> {

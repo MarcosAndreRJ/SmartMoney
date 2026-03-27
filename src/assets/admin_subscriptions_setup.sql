@@ -80,7 +80,41 @@ CREATE INDEX IF NOT EXISTS idx_subscriptions_user_id ON public.subscriptions(use
 CREATE INDEX IF NOT EXISTS idx_subscriptions_status ON public.subscriptions(status);
 CREATE INDEX IF NOT EXISTS idx_system_notifications_user_id ON public.system_notifications(user_id);
 
--- 7. Função para buscar métricas (usada pelo AdminService)
+-- 7. Função RPC para buscar todos os usuários do auth.users
+CREATE OR REPLACE FUNCTION public.get_all_users()
+RETURNS TABLE (
+    id UUID,
+    email TEXT,
+    created_at TIMESTAMPTZ,
+    role TEXT,
+    full_name TEXT,
+    avatar_url TEXT
+) AS $$
+BEGIN
+    RETURN QUERY
+    SELECT 
+        au.id,
+        au.email::TEXT,
+        au.created_at,
+        COALESCE(
+            au.raw_user_meta_data->>'role',
+            au.raw_app_meta_data->>'role',
+            'user'
+        )::TEXT as role,
+        COALESCE(
+            au.raw_user_meta_data->>'full_name',
+            ''
+        )::TEXT as full_name,
+        COALESCE(
+            au.raw_user_meta_data->>'avatar_url',
+            ''
+        )::TEXT as avatar_url
+    FROM auth.users au
+    ORDER BY au.created_at DESC;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- 8. Função para buscar métricas (usada pelo AdminService)
 CREATE OR REPLACE FUNCTION public.get_admin_metrics()
 RETURNS JSONB AS $$
 DECLARE

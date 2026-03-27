@@ -10,11 +10,23 @@ export interface UserProfile {
 
 export interface Plan {
   id: string;
+  slug?: 'basic' | 'pro' | 'family' | null;
   name: string;
   description?: string;
   price: number;
   features: string[];
-  limits: { transactions: number; accounts: number };
+  restrictions: {
+    max_accounts: number | null;
+    max_cards: number | null;
+  };
+  resources: {
+    account_transfers: boolean;
+    goals: boolean;
+    loans: boolean;
+    investments: boolean;
+    whatsapp_entries: boolean;
+    shared_accounts: boolean;
+  };
   is_active: boolean;
   created_at: string;
 }
