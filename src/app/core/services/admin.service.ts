@@ -107,12 +107,6 @@ export class AdminService {
   }
 
   async getPlans(): Promise<Plan[]> {
-    // Debug: check current user
-    const { data: { user } } = await this.client.auth.getUser();
-    console.log('Current user:', user);
-    console.log('User metadata:', user?.user_metadata);
-    console.log('App metadata:', user?.app_metadata);
-    
     const { data, error } = await this.client
       .from('plans')
       .select('*')
@@ -122,7 +116,6 @@ export class AdminService {
       console.error('Error fetching plans:', error);
       return [];
     }
-    console.log('Plans data from Supabase:', data);
 
     const defaultResources = {
       account_transfers: false,
@@ -199,8 +192,8 @@ export class AdminService {
       .from('subscriptions')
       .select(`
         *,
-        profiles:user_id (email),
-        plans:plan_id (name)
+        profiles:user_id (email, full_name),
+        plans:plan_id (name, price)
       `)
       .order('created_at', { ascending: false });
     
@@ -212,9 +205,11 @@ export class AdminService {
     return (data || []).map(s => ({
       id: s.id,
       user_id: s.user_id,
+      user_name: s.profiles?.full_name || s.profiles?.email?.split('@')[0],
       user_email: s.profiles?.email,
       plan_id: s.plan_id,
       plan_name: s.plans?.name,
+      plan_price: Number(s.plans?.price || 0),
       status: s.status,
       start_date: s.start_date,
       end_date: s.end_date,

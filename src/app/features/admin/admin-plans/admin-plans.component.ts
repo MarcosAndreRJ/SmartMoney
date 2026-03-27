@@ -300,14 +300,7 @@ export class AdminPlansComponent implements OnInit {
   }
 
   async loadPlans() {
-    try {
-      const plans = await this.adminService.getPlans();
-      console.log('Plans loaded:', plans);
-      this.plans.set(plans);
-    } catch (error) {
-      console.error('Error loading plans:', error);
-      this.plans.set([]);
-    }
+    this.plans.set(await this.adminService.getPlans());
   }
 
   openCreateModal() {

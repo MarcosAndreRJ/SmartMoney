@@ -34,9 +34,11 @@ export interface Plan {
 export interface Subscription {
   id: string;
   user_id: string;
+  user_name?: string;
   user_email?: string;
   plan_id: string;
   plan_name?: string;
+  plan_price?: number;
   status: 'active' | 'cancelled' | 'expired' | 'trial';
   start_date: string;
   end_date: string;

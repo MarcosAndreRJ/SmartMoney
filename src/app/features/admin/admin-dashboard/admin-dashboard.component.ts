@@ -119,7 +119,7 @@ import { NavigationService } from '../../../core/services/navigation.service';
         <!-- Links Rápidos -->
         <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
           <h2 class="text-lg font-bold text-slate-900 mb-4">Ações Rápidas</h2>
-          <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div class="grid grid-cols-2 md:grid-cols-5 gap-4">
             <button (click)="navigateTo('admin-users')" class="flex flex-col items-center p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
               <mat-icon class="text-blue-500 mb-2">person_add</mat-icon>
               <span class="text-sm font-medium text-slate-700">Gerenciar Usuários</span>
@@ -127,6 +127,10 @@ import { NavigationService } from '../../../core/services/navigation.service';
             <button (click)="navigateTo('admin-plans')" class="flex flex-col items-center p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
               <mat-icon class="text-purple-500 mb-2">card_membership</mat-icon>
               <span class="text-sm font-medium text-slate-700">Gerenciar Planos</span>
+            </button>
+            <button (click)="navigateTo('admin-subscriptions')" class="flex flex-col items-center p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
+              <mat-icon class="text-emerald-500 mb-2">subscriptions</mat-icon>
+              <span class="text-sm font-medium text-slate-700">Gerenciar Assinaturas</span>
             </button>
             <button (click)="navigateTo('admin-transactions')" class="flex flex-col items-center p-4 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors">
               <mat-icon class="text-amber-500 mb-2">search</mat-icon>

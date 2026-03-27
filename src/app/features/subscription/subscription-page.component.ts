@@ -49,29 +49,41 @@ interface Invoice {
                 <span class="text-white/80 text-sm font-medium">Seu Plano</span>
               </div>
               <div class="w-1/2 p-8">
-                <div class="flex items-center gap-2 mb-2">
-                  <span class="px-3 py-1 bg-emerald-50 text-emerald-700 text-xs font-bold rounded-full uppercase tracking-wider">
-                    {{ getStatusLabel() }}
+                <div class="flex items-center gap-3 mb-2">
+                  <span class="px-2 py-0.5 bg-emerald-50 text-emerald-600 text-[10px] font-bold rounded uppercase tracking-wider">
+                    Plano Atual
                   </span>
-                </div>
-                <h2 class="text-2xl font-bold text-slate-900">{{ currentPlanUI()?.name || 'Plano' }}</h2>
-                <p class="text-slate-500 mt-2">
-                  @if (userSubscription()?.end_date) {
-                    Próxima cobrança: {{ nextBillingDate() }}
+                  @if (userSubscription()?.status === 'active') {
+                    <div class="flex items-center gap-1">
+                      <mat-icon class="text-emerald-500 text-sm w-4 h-4 rounded-full bg-emerald-50 flex items-center justify-center">check_circle</mat-icon>
+                      <span class="text-emerald-600 text-[10px] font-bold uppercase tracking-wider">Ativo</span>
+                    </div>
                   }
-                </p>
-                <p class="text-2xl font-bold text-slate-900 mt-2">
-                  {{ currentPlanUI()?.price || 'Grátis' }}
-                </p>
-                <div class="flex gap-3 mt-6">
-                  <button (click)="showInvoiceHistory.set(true)" class="flex items-center gap-2 px-4 py-2 border border-slate-200 text-slate-600 hover:bg-slate-50 rounded-xl transition-colors">
-                    <mat-icon class="text-lg">receipt_long</mat-icon>
-                    <span class="text-sm font-medium">Histórico de Faturas</span>
+                </div>
+                <h2 class="text-3xl font-bold text-slate-900 mb-6">{{ currentPlanUI()?.name || 'SmartMoney PRO' }}</h2>
+                
+                <div class="flex flex-col md:flex-row items-start md:items-center gap-6">
+                  <div class="flex items-center gap-2">
+                    <mat-icon class="text-slate-400">event</mat-icon>
+                    <p class="text-slate-500 text-sm">
+                      Próxima cobrança: <span class="font-bold text-slate-600">{{ userSubscription()?.end_date ? nextBillingDate() : '-' }}</span>
+                    </p>
+                  </div>
+                  <div class="flex items-center gap-2">
+                    <mat-icon class="text-slate-400">payments</mat-icon>
+                    <p class="text-slate-500 text-sm">
+                      Valor: <span class="font-bold text-slate-600">{{ currentPlanUI()?.price || 'Grátis' }}</span>
+                    </p>
+                  </div>
+                </div>
+
+                <div class="flex items-center gap-6 mt-8">
+                  <button (click)="showInvoiceHistory.set(true)" class="px-5 py-2.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl font-bold text-sm transition-colors border-none">
+                    Histórico de Faturas
                   </button>
                   @if (userSubscription()?.status === 'active') {
-                    <button (click)="showCancelModal.set(true)" class="flex items-center gap-2 px-4 py-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-xl transition-colors">
-                      <mat-icon class="text-lg">cancel</mat-icon>
-                      <span class="text-sm font-medium">Cancelar Assinatura</span>
+                    <button (click)="showCancelModal.set(true)" class="text-red-500 hover:text-red-600 font-bold text-sm transition-colors bg-transparent border-none p-0 inline-flex items-center">
+                      Cancelar Assinatura
                     </button>
                   }
                 </div>
@@ -106,12 +118,13 @@ interface Invoice {
                 [class.border-slate-200]="!plan.recommended"
               >
                 @if (plan.recommended) {
-                  <div class="absolute -top-3 left-1/2 -translate-x-1/2">
-                    <span class="px-4 py-1 bg-emerald-500 text-white text-xs font-bold rounded-full uppercase tracking-wider">Recomendado</span>
+                  <div class="absolute -top-3.5 left-1/2 -translate-x-1/2 bg-emerald-500 text-white text-xs font-bold rounded-full uppercase tracking-wider px-4 py-1 shadow-sm whitespace-nowrap">
+                    Recomendado
                   </div>
                 }
                 <h4 class="text-xl font-bold text-slate-900 mt-2">{{ plan.name }}</h4>
-                <div class="mt-4">
+                <p class="text-slate-500 text-sm mb-4">{{ getPlanSubtitle(plan.name) }}</p>
+                <div class="mt-2">
                   <span class="text-3xl font-bold" 
                     [class.text-slate-900]="!plan.recommended"
                     [class.text-emerald-600]="plan.recommended">{{ plan.price }}</span>
@@ -135,19 +148,19 @@ interface Invoice {
                 <button 
                   (click)="plan.action === 'current' ? null : openChangePlanModal(plan)"
                   [disabled]="plan.action === 'current'"
-                  class="w-full mt-6 py-3 rounded-xl font-bold text-sm transition-all"
-                  [class.bg-emerald-500]="plan.action === 'current'"
-                  [class.text-white]="plan.action === 'current'"
+                  class="w-full mt-6 py-3 rounded-xl font-bold text-sm transition-all border-none"
+                  [class.bg-slate-100]="plan.name === 'Basic' && plan.action !== 'current'"
+                  [class.text-slate-800]="plan.name === 'Basic' && plan.action !== 'current'"
+                  [class.hover:bg-slate-200]="plan.name === 'Basic' && plan.action !== 'current'"
+                  [class.bg-emerald-500]="plan.action === 'current' || (plan.name !== 'Basic' && plan.name !== 'Family')"
+                  [class.text-white]="plan.action === 'current' || (plan.name !== 'Basic' && plan.name !== 'Family')"
                   [class.cursor-not-allowed]="plan.action === 'current'"
-                  [class.bg-emerald-500]="plan.action === 'upgrade'"
-                  [class.text-white]="plan.action === 'upgrade'"
-                  [class.hover:bg-emerald-600]="plan.action === 'upgrade'"
-                  [class.border]="plan.action === 'downgrade'"
-                  [class.border-slate-300]="plan.action === 'downgrade'"
-                  [class.text-slate-700]="plan.action === 'downgrade'"
-                  [class.bg-slate-900]="plan.action === 'downgrade'"
-                  [class.text-white]="plan.action === 'downgrade'"
-                  [class.hover:bg-slate-800]="plan.action === 'downgrade'"
+                  [class.hover:bg-emerald-600]="plan.action !== 'current' && (plan.name !== 'Basic' && plan.name !== 'Family')"
+                  [class.bg-slate-100]="plan.action === 'current' && plan.name === 'Basic'"
+                  [class.text-slate-400]="plan.action === 'current' && plan.name === 'Basic'"
+                  [class.bg-slate-900]="plan.name === 'Family' && plan.action !== 'current'"
+                  [class.text-white]="plan.name === 'Family' && plan.action !== 'current'"
+                  [class.hover:bg-slate-800]="plan.name === 'Family' && plan.action !== 'current'"
                 >
                   {{ getButtonLabel(plan.action, plan.name) }}
                 </button>
@@ -366,17 +379,24 @@ export class SubscriptionPageComponent implements OnInit {
     }
   }
 
+  getPlanSubtitle(name: string): string {
+    if (name.toLowerCase().includes('basic') || name.toLowerCase().includes('grátis')) {
+      return 'Para quem está começando';
+    }
+    if (name.toLowerCase().includes('pro')) {
+      return 'Controle total e automação';
+    }
+    return 'Gestão para toda a família';
+  }
+
   isLastFeature(features: string[], feature: string): boolean {
     return features.indexOf(feature) === features.length - 1;
   }
 
   getButtonLabel(action: string, planName?: string): string {
-    switch (action) {
-      case 'current': return 'Plano Atual';
-      case 'upgrade': return 'Upgrade';
-      case 'downgrade': return 'Mudar para ' + planName;
-      default: return 'Selecionar';
-    }
+    if (action === 'current') return 'Plano Atual';
+    if (action === 'downgrade') return 'Fazer Downgrade';
+    return planName ? `Mudar para ${planName}` : 'Upgrade';
   }
 
   openChangePlanModal(plan: PlanUI) {
