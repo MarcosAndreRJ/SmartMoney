@@ -152,15 +152,21 @@ interface Invoice {
                   [class.bg-slate-100]="plan.name === 'Basic' && plan.action !== 'current'"
                   [class.text-slate-800]="plan.name === 'Basic' && plan.action !== 'current'"
                   [class.hover:bg-slate-200]="plan.name === 'Basic' && plan.action !== 'current'"
-                  [class.bg-emerald-500]="plan.action === 'current' || (plan.name !== 'Basic' && plan.name !== 'Family')"
-                  [class.text-white]="plan.action === 'current' || (plan.name !== 'Basic' && plan.name !== 'Family')"
+                  [class.bg-emerald-500]="plan.action === 'current' || (plan.name !== 'Basic' && plan.name !== 'Family' && plan.name !== 'Master' && plan.name !== 'Ultra')"
+                  [class.text-white]="plan.action === 'current' || (plan.name !== 'Basic' && plan.name !== 'Family' && plan.name !== 'Master' && plan.name !== 'Ultra')"
                   [class.cursor-not-allowed]="plan.action === 'current'"
-                  [class.hover:bg-emerald-600]="plan.action !== 'current' && (plan.name !== 'Basic' && plan.name !== 'Family')"
+                  [class.hover:bg-emerald-600]="plan.action !== 'current' && (plan.name !== 'Basic' && plan.name !== 'Family' && plan.name !== 'Master' && plan.name !== 'Ultra')"
                   [class.bg-slate-100]="plan.action === 'current' && plan.name === 'Basic'"
                   [class.text-slate-400]="plan.action === 'current' && plan.name === 'Basic'"
                   [class.bg-slate-900]="plan.name === 'Family' && plan.action !== 'current'"
                   [class.text-white]="plan.name === 'Family' && plan.action !== 'current'"
                   [class.hover:bg-slate-800]="plan.name === 'Family' && plan.action !== 'current'"
+                  [class.bg-yellow-500]="plan.name === 'Master' && plan.action !== 'current'"
+                  [class.text-slate-900]="plan.name === 'Master' && plan.action !== 'current'"
+                  [class.hover:bg-yellow-600]="plan.name === 'Master' && plan.action !== 'current'"
+                  [class.bg-orange-600]="plan.name === 'Ultra' && plan.action !== 'current'"
+                  [class.text-white]="plan.name === 'Ultra' && plan.action !== 'current'"
+                  [class.hover:bg-orange-700]="plan.name === 'Ultra' && plan.action !== 'current'"
                 >
                   {{ getButtonLabel(plan.action, plan.name) }}
                 </button>
@@ -339,12 +345,62 @@ export class SubscriptionPageComponent implements OnInit {
         return;
       }
 
-      const [plansData, subscriptionData] = await Promise.all([
-        this.adminService.getPlans(),
-        this.adminService.getUserSubscription(user.id)
-      ]);
-
+      const plansData = await this.adminService.getPlans();
       this.plans.set(plansData.filter((p: any) => p.is_active));
+
+      let subscriptionData = await this.adminService.getUserSubscription(user.id);
+
+      const { data: activePlanData } = await this.supabaseService.client
+        .from('active_user_plan')
+        .select('active_plan,is_premium_active')
+        .eq('user_id', user.id)
+        .maybeSingle();
+
+      if (activePlanData?.is_premium_active) {
+        const premiumPlan = plansData.find((p: any) => p.slug === activePlanData.active_plan);
+        if (premiumPlan) {
+          subscriptionData = {
+            ...(subscriptionData || {}),
+            user_id: user.id,
+            plan_id: premiumPlan.id,
+            plans: premiumPlan,
+            plan_name: premiumPlan.name,
+            plan_price: Number(premiumPlan.price || 0),
+            status: 'active',
+            payment_gateway: 'stripe'
+          } as any;
+        }
+      }
+      
+      if (!subscriptionData) {
+        const { data: stripeSub } = await this.supabaseService.client
+          .from('user_subscriptions')
+          .select('*')
+          .eq('user_id', user.id)
+          .maybeSingle();
+
+        if (stripeSub) {
+          const planData = plansData.find((p: any) => p.slug === stripeSub.plan_code);
+          subscriptionData = {
+            id: stripeSub.id,
+            user_id: stripeSub.user_id,
+            plan_id: planData?.id || '',
+            plan_name: planData?.name,
+            plan_price: Number(planData?.price || 0),
+            status: stripeSub.status === 'active' ? 'active' : 
+                   stripeSub.status === 'trialing' ? 'trial' :
+                   stripeSub.status === 'canceled' ? 'cancelled' : 'expired',
+            start_date: stripeSub.current_period_start || new Date().toISOString(),
+            end_date: stripeSub.current_period_end || new Date().toISOString(),
+            payment_gateway: 'stripe',
+            gateway_subscription_id: stripeSub.stripe_subscription_id,
+            created_at: stripeSub.created_at,
+            resources: planData?.resources,
+            restrictions: planData?.restrictions,
+            plans: planData
+          } as any;
+        }
+      }
       
       if (subscriptionData) {
         this.userSubscription.set(subscriptionData);
@@ -380,11 +436,18 @@ export class SubscriptionPageComponent implements OnInit {
   }
 
   getPlanSubtitle(name: string): string {
-    if (name.toLowerCase().includes('basic') || name.toLowerCase().includes('grátis')) {
+    const lower = name.toLowerCase();
+    if (lower.includes('basic') || lower.includes('grátis')) {
       return 'Para quem está começando';
     }
-    if (name.toLowerCase().includes('pro')) {
+    if (lower.includes('pro')) {
       return 'Controle total e automação';
+    }
+    if (lower.includes('master')) {
+      return 'Recursos avançados para profissionais';
+    }
+    if (lower.includes('ultra')) {
+      return 'O plano individual definitivo';
     }
     return 'Gestão para toda a família';
   }

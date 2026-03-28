@@ -10,7 +10,7 @@ export interface UserProfile {
 
 export interface Plan {
   id: string;
-  slug?: 'basic' | 'pro' | 'family' | null;
+  slug?: 'basic' | 'pro' | 'master' | 'ultra' | 'family' | null;
   name: string;
   description?: string;
   price: number;
@@ -39,7 +39,7 @@ export interface Subscription {
   plan_id: string;
   plan_name?: string;
   plan_price?: number;
-  status: 'active' | 'cancelled' | 'expired' | 'trial';
+  status: 'active' | 'cancelled' | 'expired' | 'trial' | 'pending';
   start_date: string;
   end_date: string;
   payment_gateway: 'pagarme' | 'stripe' | 'manual' | 'credit_card' | 'pix' | 'boleto';

@@ -147,7 +147,7 @@ export class AdminService {
   }
 
   async createPlan(plan: Partial<Plan>): Promise<boolean> {
-    const { error } = await this.client
+    const { data, error } = await this.client
       .from('plans')
       .insert([{
         slug: plan.slug,
@@ -158,12 +158,13 @@ export class AdminService {
         restrictions: plan.restrictions,
         resources: plan.resources,
         is_active: plan.is_active ?? true
-      }]);
-    return !error;
+      }])
+      .select();
+    return !error && data && data.length > 0;
   }
 
   async updatePlan(id: string, updates: Partial<Plan>): Promise<boolean> {
-    const { error } = await this.client
+    const { data, error } = await this.client
       .from('plans')
       .update({
         slug: updates.slug,
@@ -175,8 +176,9 @@ export class AdminService {
         resources: updates.resources,
         is_active: updates.is_active
       })
-      .eq('id', id);
-    return !error;
+      .eq('id', id)
+      .select();
+    return !error && data && data.length > 0;
   }
 
   async deletePlan(id: string): Promise<boolean> {
@@ -222,10 +224,138 @@ export class AdminService {
   async getUserSubscription(userId: string): Promise<Subscription | null> {
     const { data } = await this.client
       .from('subscriptions')
-      .select('*, plans:plan_id (name)')
+      .select(`
+        *,
+        plans:plan_id (*)
+      `)
       .eq('user_id', userId)
-      .single();
-    return data;
+      .in('status', ['active', 'trial'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const { data: stripeData } = await this.client
+      .from('user_subscriptions')
+      .select('*')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    if (stripeData && ['active', 'trialing'].includes(String(stripeData.status || '').toLowerCase())) {
+      const { data: planData } = await this.client
+        .from('plans')
+        .select('*')
+        .eq('slug', stripeData.plan_code)
+        .maybeSingle();
+
+      const mappedStatus: 'active' | 'trial' | 'cancelled' | 'expired' =
+        stripeData.status === 'active'
+          ? 'active'
+          : stripeData.status === 'trialing'
+            ? 'trial'
+            : stripeData.status === 'canceled' || stripeData.status === 'incomplete_expired'
+              ? 'cancelled'
+              : 'expired';
+
+      return {
+        id: stripeData.id,
+        user_id: stripeData.user_id,
+        plan_id: planData?.id || data?.plan_id || '',
+        plan_name: planData?.name,
+        plan_price: Number(planData?.price || 0),
+        status: mappedStatus,
+        start_date: stripeData.current_period_start || new Date().toISOString(),
+        end_date: stripeData.current_period_end || new Date().toISOString(),
+        payment_gateway: 'stripe',
+        gateway_subscription_id: stripeData.stripe_subscription_id,
+        created_at: stripeData.created_at,
+        resources: planData?.resources,
+        restrictions: planData?.restrictions,
+        plans: planData || undefined
+      } as any;
+    }
+
+    if (!data) {
+      if (!stripeData) {
+        const { data: latestAny } = await this.client
+          .from('subscriptions')
+          .select(`
+            *,
+            plans:plan_id (*)
+          `)
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+
+        if (latestAny) {
+          return {
+            id: latestAny.id,
+            user_id: latestAny.user_id,
+            plan_id: latestAny.plan_id,
+            plan_name: latestAny.plans?.name,
+            plan_price: latestAny.plans?.price,
+            status: latestAny.status,
+            start_date: latestAny.start_date,
+            end_date: latestAny.end_date,
+            payment_gateway: latestAny.payment_gateway,
+            created_at: latestAny.created_at,
+            resources: latestAny.plans?.resources,
+            restrictions: latestAny.plans?.restrictions
+          } as any;
+        }
+
+        return null;
+      }
+
+      const { data: planData } = await this.client
+        .from('plans')
+        .select('*')
+        .eq('slug', stripeData.plan_code)
+        .maybeSingle();
+
+      const stripeStatus = String(stripeData.status || '').toLowerCase();
+      const mappedStatus: 'active' | 'trial' | 'cancelled' | 'expired' =
+        stripeStatus === 'active'
+          ? 'active'
+          : stripeStatus === 'trialing'
+            ? 'trial'
+            : stripeStatus === 'canceled' || stripeStatus === 'incomplete_expired'
+              ? 'cancelled'
+              : 'expired';
+
+      return {
+        id: stripeData.id,
+        user_id: stripeData.user_id,
+        plan_id: planData?.id || '',
+        plan_name: planData?.name,
+        plan_price: Number(planData?.price || 0),
+        status: mappedStatus,
+        start_date: stripeData.current_period_start || new Date().toISOString(),
+        end_date: stripeData.current_period_end || new Date().toISOString(),
+        payment_gateway: 'stripe',
+        gateway_subscription_id: stripeData.stripe_subscription_id,
+        created_at: stripeData.created_at,
+        resources: planData?.resources,
+        restrictions: planData?.restrictions,
+        plans: planData || undefined
+      } as any;
+    }
+
+    return {
+      id: data.id,
+      user_id: data.user_id,
+      plan_id: data.plan_id,
+      plan_name: data.plans?.name,
+      plan_price: data.plans?.price,
+      status: data.status,
+      start_date: data.start_date,
+      end_date: data.end_date,
+      payment_gateway: data.payment_gateway,
+      created_at: data.created_at,
+      // Add extra fields for feature gating
+      resources: data.plans?.resources,
+      restrictions: data.plans?.restrictions
+    } as any;
   }
 
   async createSubscription(sub: Partial<Subscription>): Promise<boolean> {

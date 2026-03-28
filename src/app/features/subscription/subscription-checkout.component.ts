@@ -5,9 +5,13 @@ import { MatIconModule } from '@angular/material/icon';
 import { NavigationService } from '../../core/services/navigation.service';
 import { AdminService } from '../../core/services/admin.service';
 import { SupabaseService } from '../../core/services/supabase.service';
+import { BillingService } from '../../core/services/billing.service';
+import { PLAN_PRICE_IDS, PlanCode } from '../../core/constants/plans.constants';
+import { Subscription as SubscriptionModel } from '../../core/models/admin.models';
 
 interface PlanDetails {
   id: string;
+  slug?: string | null;
   name: string;
   price: string;
   priceValue: number;
@@ -95,49 +99,67 @@ interface PlanDetails {
                     </div>
 
                     @if (paymentMethod() === 'card') {
-                      <div class="space-y-4">
-                        <div>
-                          <label class="block text-sm font-medium text-slate-700 mb-2">Número do Cartão</label>
-                          <input type="text" [(ngModel)]="cardNumber" placeholder="0000 0000 0000 0000"
-                            class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                      @if (isStripeHostedCheckout()) {
+                        <div class="rounded-xl border border-emerald-100 bg-emerald-50 p-5">
+                          <div class="flex items-start gap-4">
+                            <div class="mt-1">
+                              <mat-icon class="text-3xl text-emerald-600">lock</mat-icon>
+                            </div>
+                            <div>
+                              <p class="font-bold text-emerald-800 text-lg">Pagamento seguro via Stripe Checkout</p>
+                              <p class="text-sm text-emerald-700 mt-1 leading-relaxed">
+                                Os dados do cartão serão informados diretamente no ambiente seguro do Stripe. 
+                                Isso garante proteção total aos seus dados e aumenta a segurança da transação.
+                              </p>
+                            </div>
+                          </div>
                         </div>
-                        <div>
-                          <label class="block text-sm font-medium text-slate-700 mb-2">Nome do Titular</label>
-                          <input type="text" [(ngModel)]="cardName" placeholder="Nome como está no cartão"
-                            class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
-                        </div>
-                        <div class="grid grid-cols-2 gap-4">
+                      } @else {
+                        <div class="space-y-4">
                           <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-2">Validade</label>
-                            <input type="text" [(ngModel)]="cardExpiry" placeholder="MM/AA"
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Número do Cartão</label>
+                            <input type="text" [(ngModel)]="cardNumber" placeholder="0000 0000 0000 0000"
                               class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
                           </div>
                           <div>
-                            <label class="block text-sm font-medium text-slate-700 mb-2">CVV</label>
-                            <input type="text" [(ngModel)]="cardCvv" placeholder="123"
+                            <label class="block text-sm font-medium text-slate-700 mb-2">Nome do Titular</label>
+                            <input type="text" [(ngModel)]="cardName" placeholder="Nome como está no cartão"
                               class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
                           </div>
+                          <div class="grid grid-cols-2 gap-4">
+                            <div>
+                              <label class="block text-sm font-medium text-slate-700 mb-2">Validade</label>
+                              <input type="text" [(ngModel)]="cardExpiry" placeholder="MM/AA"
+                                class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                            </div>
+                            <div>
+                              <label class="block text-sm font-medium text-slate-700 mb-2">CVV</label>
+                              <input type="text" [(ngModel)]="cardCvv" placeholder="123"
+                                class="w-full px-4 py-3 border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                            </div>
+                          </div>
                         </div>
-                      </div>
+                      }
                     }
 
                     @if (paymentMethod() === 'pix') {
-                      <div class="text-center py-8 space-y-4">
+                      <div class="text-center py-6 space-y-4">
                         <div class="w-48 h-48 bg-white border-2 border-emerald-100 rounded-xl mx-auto flex items-center justify-center">
                           <div class="text-center">
                             <mat-icon class="text-6xl text-emerald-500">qr_code_2</mat-icon>
-                            <p class="text-xs text-slate-500 mt-2">QR Code PIX</p>
+                            <p class="text-xs text-slate-500 mt-2 font-medium">SCAN PARA PAGAR</p>
                           </div>
                         </div>
-                        <div class="bg-emerald-50 rounded-xl p-4">
-                          <p class="text-sm text-emerald-700 font-medium">Copie o código PIX</p>
-                          <code class="block mt-2 p-3 bg-white rounded-lg text-xs text-slate-600 break-all">
-                            00020126580014BR.GOV.BCB.PIX0136random-pix-code-here-00000000000000
-                          </code>
-                          <button (click)="copyPixCode()" class="mt-3 text-sm text-emerald-600 font-medium hover:text-emerald-700">
-                            <mat-icon class="text-lg align-middle">content_copy</mat-icon>
-                            Copiar código
-                          </button>
+                        <div class="bg-emerald-50 rounded-xl p-5 border border-emerald-100">
+                          <p class="text-sm text-emerald-800 font-bold">Chave PIX (Telefone)</p>
+                          <div class="mt-3 flex items-center justify-between bg-white p-3 rounded-lg border border-emerald-200">
+                            <span class="text-emerald-700 font-mono font-bold text-lg">(21) 96409-3554</span>
+                            <button (click)="copyPixCode()" class="flex items-center gap-1 text-emerald-600 font-bold hover:text-emerald-800 transition-colors">
+                              <mat-icon class="text-xl">content_copy</mat-icon>
+                              COPIAR
+                            </button>
+                          </div>
+                          <p class="text-xs text-emerald-600 mt-2">Após o pagamento, sua assinatura será validada manualmente.</p>
                         </div>
                       </div>
                     }
@@ -169,7 +191,7 @@ interface PlanDetails {
                         <div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
                         Processando...
                       } @else {
-                        Finalizar Pagamento
+                        {{ isStripeHostedCheckout() ? 'Continuar no Stripe' : 'Finalizar Pagamento' }}
                       }
                     </button>
                   </div>
@@ -252,6 +274,7 @@ export class SubscriptionCheckoutComponent implements OnInit {
   private navService = inject(NavigationService);
   private adminService = inject(AdminService);
   private supabaseService = inject(SupabaseService);
+  private billingService = inject(BillingService);
 
   step = signal<1 | 2 | 3>(2);
   paymentMethod = signal<'card' | 'pix' | 'boleto'>('card');
@@ -299,6 +322,7 @@ export class SubscriptionCheckoutComponent implements OnInit {
       if (plan) {
         this.selectedPlan.set({
           id: plan.id,
+          slug: plan.slug,
           name: plan.name,
           price: plan.price == 0 ? 'Grátis' : `R$ ${Number(plan.price).toFixed(2)}`,
           priceValue: Number(plan.price) || 0,
@@ -325,9 +349,9 @@ export class SubscriptionCheckoutComponent implements OnInit {
   }
 
   copyPixCode() {
-    const code = '00020126580014BR.GOV.BCB.PIX0136random-pix-code-here-00000000000000';
+    const code = '(21) 96409-3554';
     navigator.clipboard.writeText(code);
-    alert('Código PIX copiado!');
+    alert('Chave PIX copiada! Por favor, realize o pagamento e aguarde a validação.');
   }
 
   copyBoletoCode() {
@@ -337,59 +361,101 @@ export class SubscriptionCheckoutComponent implements OnInit {
   }
 
   async finalizarPagamento() {
+    console.log('[Checkout] Botão Finalizar clicado');
     this.processing.set(true);
 
     try {
       const user = await this.supabaseService.getUser();
       if (!user) {
+        console.warn('[Checkout] Usuário não encontrado');
         alert('Usuário não autenticado');
         return;
       }
 
       const plan = this.selectedPlan();
       if (!plan) {
+        console.warn('[Checkout] Plano não selecionado no estado');
         alert('Plano não selecionado');
         return;
       }
 
-      const endDate = new Date();
-      endDate.setMonth(endDate.getMonth() + 1);
+      const planCode = this.resolvePlanCode(plan);
+      console.log('[Checkout] Processando plano:', planCode);
 
-      const existingSub = await this.adminService.getUserSubscription(user.id);
+      // Se for Cartão e não for plano Basic, vai para o Stripe
+      if (this.paymentMethod() === 'card' && planCode !== PlanCode.BASIC) {
+        const priceId = PLAN_PRICE_IDS[planCode as Exclude<PlanCode, PlanCode.BASIC>];
+        if (!priceId) {
+          throw new Error('Preco do plano nao encontrado para checkout');
+        }
 
-      if (existingSub?.id) {
-        await this.adminService.updateSubscription(existingSub.id, {
-          plan_id: plan.id,
-          status: 'active',
-          payment_gateway: this.getGatewayName()
-        });
-      } else {
-        await this.adminService.createSubscription({
-          user_id: user.id,
-          plan_id: plan.id,
-          status: 'active',
-          start_date: new Date().toISOString(),
-          end_date: endDate.toISOString(),
-          payment_gateway: this.getGatewayName()
-        });
+        const checkoutUrl = await this.billingService.startCheckout(priceId);
+        window.location.href = checkoutUrl;
+        return;
       }
 
+      // Para PIX, Boleto ou Plano Basic: Ativação Manual (status active para basic, manual_pending para premium no pix/boleto)
+      console.log('[Checkout] Ativando plano via método:', this.paymentMethod());
+      
+      const isManualPremium = planCode !== PlanCode.BASIC && (this.paymentMethod() === 'pix' || this.paymentMethod() === 'boleto');
+      
+      if (isManualPremium) {
+        alert('Seu pedido foi registrado! Assim que confirmarmos o recebimento via ' + this.paymentMethod().toUpperCase() + ', sua assinatura será liberada.');
+      }
+
+      await this.activateManualPlan(user.id, plan.id, isManualPremium ? 'pending' : 'active');
       this.step.set(3);
+      return;
     } catch (err) {
       console.error('Error processing payment:', err);
-      alert('Erro ao processar pagamento. Tente novamente.');
+      const message = err instanceof Error ? err.message : 'Erro ao processar pagamento. Tente novamente.';
+      alert(message);
     } finally {
       this.processing.set(false);
     }
   }
 
-  getGatewayName(): 'pagarme' | 'stripe' | 'manual' | 'credit_card' | 'pix' | 'boleto' {
-    switch (this.paymentMethod()) {
-      case 'card': return 'credit_card';
-      case 'pix': return 'pix';
-      case 'boleto': return 'boleto';
-      default: return 'manual';
+  private async activateManualPlan(userId: string, planId: string, status: 'active' | 'pending') {
+    const endDate = new Date();
+    endDate.setMonth(endDate.getMonth() + 1);
+
+    const existingSub = await this.adminService.getUserSubscription(userId);
+
+    const method = this.paymentMethod();
+
+    const payload: Partial<SubscriptionModel> = {
+      user_id: userId,
+      plan_id: planId,
+      status: status,
+      payment_gateway: method === 'card' ? 'credit_card' : method,
+      start_date: new Date().toISOString(),
+      end_date: endDate.toISOString()
+    };
+
+    if (existingSub?.id) {
+      await this.adminService.updateSubscription(existingSub.id, payload);
+      return;
     }
+
+    await this.adminService.createSubscription(payload);
+  }
+
+  private resolvePlanCode(plan: PlanDetails): PlanCode {
+    const fromSlug = String(plan.slug || '').toLowerCase();
+    const fromName = String(plan.name || '').toLowerCase();
+    const key = fromSlug || fromName;
+
+    if (key.includes('family')) return PlanCode.FAMILY;
+    if (key.includes('ultra')) return PlanCode.MASTER;
+    if (key.includes('master')) return PlanCode.MASTER;
+    if (key.includes('pro')) return PlanCode.PRO;
+    return PlanCode.BASIC;
+  }
+
+  isStripeHostedCheckout(): boolean {
+    const plan = this.selectedPlan();
+    if (!plan) return false;
+    return this.resolvePlanCode(plan) !== PlanCode.BASIC;
   }
 
   goToDashboard() {
