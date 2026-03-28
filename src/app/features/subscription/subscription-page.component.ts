@@ -4,6 +4,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { AdminService } from '../../core/services/admin.service';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { NavigationService } from '../../core/services/navigation.service';
+import { BillingService } from '../../core/services/billing.service';
+import { PLAN_PRICE_IDS, PlanCode } from '../../core/constants/plans.constants';
 import { Plan, Subscription } from '../../core/models/admin.models';
 
 interface PlanUI {
@@ -59,6 +61,12 @@ interface Invoice {
                       <span class="text-emerald-600 text-[10px] font-bold uppercase tracking-wider">Ativo</span>
                     </div>
                   }
+                  @if (userSubscription()?.status === 'pending_cancellation') {
+                    <div class="flex items-center gap-1">
+                      <mat-icon class="text-amber-500 text-sm w-4 h-4 rounded-full bg-amber-50 flex items-center justify-center">schedule</mat-icon>
+                      <span class="text-amber-600 text-[10px] font-bold uppercase tracking-wider">Cancelamento Pendente</span>
+                    </div>
+                  }
                 </div>
                 <h2 class="text-3xl font-bold text-slate-900 mb-6">{{ currentPlanUI()?.name || 'SmartKonta PRO' }}</h2>
                 
@@ -81,9 +89,13 @@ interface Invoice {
                   <button (click)="showInvoiceHistory.set(true)" class="px-5 py-2.5 bg-slate-100 text-slate-700 hover:bg-slate-200 rounded-xl font-bold text-sm transition-colors border-none">
                     Histórico de Faturas
                   </button>
-                  @if (userSubscription()?.status === 'active') {
+                  @if (userSubscription()?.status === 'active' || userSubscription()?.status === 'pending_cancellation') {
                     <button (click)="showCancelModal.set(true)" class="text-red-500 hover:text-red-600 font-bold text-sm transition-colors bg-transparent border-none p-0 inline-flex items-center">
-                      Cancelar Assinatura
+                      @if (userSubscription()?.status === 'pending_cancellation') {
+                        Ver Detalhes do Cancelamento
+                      } @else {
+                        Cancelar Assinatura
+                      }
                     </button>
                   }
                 </div>
@@ -184,21 +196,40 @@ interface Invoice {
             <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto">
               <mat-icon class="text-3xl text-red-500">warning</mat-icon>
             </div>
-            <h3 class="text-xl font-bold text-slate-900 mt-4">Cancelar Assinatura?</h3>
+            <h3 class="text-xl font-bold text-slate-900 mt-4">
+              @if (userSubscription()?.status === 'pending_cancellation') {
+                Detalhes do Cancelamento
+              } @else {
+                Cancelar Assinatura?
+              }
+            </h3>
             <p class="text-slate-500 mt-2">
-              Você está prestes a cancelar seu plano {{ currentPlanUI()?.name }}.
-              @if (userSubscription()?.end_date) {
-                Após o cancelamento, você perderá acesso aos recursos premium em {{ nextBillingDate() }}.
+              @if (userSubscription()?.status === 'pending_cancellation') {
+                Seu plano {{ currentPlanUI()?.name }} está agendado para cancelamento.
+                @if (userSubscription()?.end_date) {
+                  Você perderá acesso aos recursos premium em {{ nextBillingDate() }}.
+                }
+              } @else {
+                Você está prestes a cancelar seu plano {{ currentPlanUI()?.name }}.
+                @if (userSubscription()?.end_date) {
+                  Após o cancelamento, você perderá acesso aos recursos premium em {{ nextBillingDate() }}.
+                }
               }
             </p>
           </div>
           <div class="flex gap-4 mt-8">
             <button (click)="showCancelModal.set(false)" class="flex-1 py-3 border border-slate-200 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors">
-              Manter Plano
+              @if (userSubscription()?.status === 'pending_cancellation') {
+                Fechar
+              } @else {
+                Manter Plano
+              }
             </button>
-            <button (click)="cancelSubscription()" class="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm hover:bg-red-600 transition-colors">
-              Cancelar Agora
-            </button>
+            @if (userSubscription()?.status !== 'pending_cancellation') {
+              <button (click)="cancelSubscription()" class="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm hover:bg-red-600 transition-colors">
+                Cancelar Agora
+              </button>
+            }
           </div>
         </div>
       </div>
@@ -266,6 +297,7 @@ export class SubscriptionPageComponent implements OnInit {
   private adminService = inject(AdminService);
   private supabaseService = inject(SupabaseService);
   private navService = inject(NavigationService);
+  private billingService = inject(BillingService);
 
   plans = signal<any[]>([]);
   userSubscription = signal<any>(null);
@@ -471,22 +503,78 @@ export class SubscriptionPageComponent implements OnInit {
     if (!sub?.id) return;
 
     try {
-      await this.adminService.cancelSubscription(sub.id);
-      this.userSubscription.update(s => ({ ...s, status: 'cancelled' }));
+      const result = await this.billingService.cancelSubscription(true);
+      this.userSubscription.update(s => ({ 
+        ...s, 
+        status: result.cancel_at_period_end ? 'pending_cancellation' : 'cancelled' 
+      }));
       this.showCancelModal.set(false);
-      alert('Assinatura cancelada. Você terá acesso até ' + this.nextBillingDate());
+      
+      if (result.cancel_at_period_end && result.current_period_end) {
+        const endDate = new Date(result.current_period_end).toLocaleDateString('pt-BR', {
+          day: 'numeric', month: 'long', year: 'numeric'
+        });
+        alert(`Cancelamento agendado!\n\nVocê terá acesso até ${endDate}.\nApós isso, seu plano voltará para o Basic.`);
+      } else {
+        alert('Assinatura cancelada. Você terá acesso até ' + this.nextBillingDate());
+      }
+      
+      await this.loadData();
     } catch (err) {
       console.error('Error cancelling subscription:', err);
-      alert('Erro ao cancelar assinatura');
+      alert(err instanceof Error ? err.message : 'Erro ao cancelar assinatura');
     }
   }
 
   async confirmChangePlan() {
     const selected = this.selectedPlan();
+    const current = this.userSubscription();
     if (!selected) return;
 
-    this.navService.selectedPlanId.set(selected.id);
-    this.navService.navigateTo('subscription-checkout');
-    this.selectedPlan.set(null);
+    const isUpgrade = selected.action === 'upgrade';
+
+    if (isUpgrade) {
+      this.navService.selectedPlanId.set(selected.id);
+      this.navService.navigateTo('subscription-checkout');
+      this.selectedPlan.set(null);
+      return;
+    }
+
+    try {
+      const planSlug = String(selected.name || '').toLowerCase();
+      let priceId = '';
+      
+      if (planSlug.includes('pro')) {
+        priceId = PLAN_PRICE_IDS[PlanCode.PRO];
+      } else if (planSlug.includes('master')) {
+        priceId = PLAN_PRICE_IDS[PlanCode.MASTER];
+      } else if (planSlug.includes('family')) {
+        priceId = PLAN_PRICE_IDS[PlanCode.FAMILY];
+      } else if (planSlug.includes('basic')) {
+        priceId = '';
+      }
+
+      if (!priceId && !planSlug.includes('basic')) {
+        throw new Error('Plano não encontrado para downgrade');
+      }
+
+      const result = await this.billingService.updateSubscriptionPlan(priceId);
+      
+      this.selectedPlan.set(null);
+      
+      if (result.current_period_end) {
+        const endDate = new Date(result.current_period_end).toLocaleDateString('pt-BR', {
+          day: 'numeric', month: 'long', year: 'numeric'
+        });
+        alert(`Downgrade agendado!\n\nVocê continuará com o plano atual até ${endDate}.\nA partir dessa data, você terá o plano ${selected.name}.`);
+      } else {
+        alert(`Plano alterado para ${selected.name} com sucesso!`);
+      }
+      
+      await this.loadData();
+    } catch (err) {
+      console.error('Error changing plan:', err);
+      alert(err instanceof Error ? err.message : 'Erro ao alterar plano');
+    }
   }
 }
