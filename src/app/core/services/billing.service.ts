@@ -144,4 +144,37 @@ export class BillingService {
       current_period_end: data.current_period_end
     };
   }
+
+  async resumeSubscription(): Promise<{
+    success: boolean;
+    message: string;
+    cancel_at_period_end: boolean;
+    current_period_end?: string;
+  }> {
+    const {
+      data: { session }
+    } = await (this.supabase.client.auth as any).getSession();
+
+    if (!session?.access_token) {
+      throw new Error('Sessao expirada. Faca login novamente.');
+    }
+
+    const { data, error } = await this.supabase.client.functions.invoke('manage-subscription', {
+      body: { action: 'resume' },
+      headers: {
+        Authorization: `Bearer ${session.access_token}`
+      }
+    });
+
+    if (error) {
+      throw new Error(error.message || 'Erro ao manter assinatura');
+    }
+
+    return {
+      success: data.success,
+      message: data.message,
+      cancel_at_period_end: data.cancel_at_period_end,
+      current_period_end: data.current_period_end
+    };
+  }
 }

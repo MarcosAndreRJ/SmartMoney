@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 420">
+  <defs>
+    <linearGradient id="purpleGradient" x1="0%" y1="100%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#6b21a8"/>
+      <stop offset="100%" style="stop-color:#d946ef"/>
+    </linearGradient>
+    <linearGradient id="blueGradient" x1="100%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#1e3a8a"/>
+      <stop offset="100%" style="stop-color:#06b6d4"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Purple arrow - left side going up and curving right at top -->
+  <path d="M175 290
+           C115 290 75 245 75 190
+           C75 135 115 90 175 90
+           L190 90
+           L155 55
+           L205 85
+           L190 110
+           L175 110
+           C125 110 95 145 95 190
+           C95 235 125 270 175 270
+           L175 290 Z"
+        fill="url(#purpleGradient)"/>
+  
+  <!-- Blue arrow - right side going down and curving left at bottom -->
+  <path d="M225 110
+           C285 110 325 155 325 210
+           C325 265 285 310 225 310
+           L210 310
+           L245 345
+           L195 315
+           L210 290
+           L225 290
+           C275 290 305 255 305 210
+           C305 165 275 130 225 130
+           L225 110 Z"
+        fill="url(#blueGradient)"/>
+  
+  <!-- Text: Smart -->
+  <text x="68" y="400" font-family="Arial, Helvetica, sans-serif" font-weight="600" font-size="38" fill="#0284c7">Smart</text>
+  
+  <!-- Text: Konta -->
+  <text x="175" y="400" font-family="Arial, Helvetica, sans-serif" font-weight="600" font-size="38" fill="#9333ea">Konta</text>
+</svg>

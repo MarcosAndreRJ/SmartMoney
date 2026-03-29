@@ -623,7 +623,8 @@ export class AdminSubscriptionsComponent implements OnInit {
   getStatusLabel(status: Subscription['status']): string {
     const labels: Record<Subscription['status'], string> = {
       active: 'Ativa',
-      trial: 'Pendente',
+      trial: 'Trial',
+      pending: 'Pendente',
       cancelled: 'Cancelada',
       expired: 'Expirada'
     };
@@ -634,6 +635,7 @@ export class AdminSubscriptionsComponent implements OnInit {
     const classes: Record<Subscription['status'], string> = {
       active: 'bg-emerald-50 text-emerald-700',
       trial: 'bg-amber-50 text-amber-700',
+      pending: 'bg-blue-50 text-blue-700',
       cancelled: 'bg-red-50 text-red-700',
       expired: 'bg-slate-100 text-slate-700'
     };
@@ -644,6 +646,7 @@ export class AdminSubscriptionsComponent implements OnInit {
     const classes: Record<Subscription['status'], string> = {
       active: 'bg-emerald-500',
       trial: 'bg-amber-500',
+      pending: 'bg-blue-500',
       cancelled: 'bg-red-500',
       expired: 'bg-slate-500'
     };
@@ -654,6 +657,8 @@ export class AdminSubscriptionsComponent implements OnInit {
     const lower = (planName || '').toLowerCase();
     if (lower.includes('family')) return 'bg-cyan-50 text-cyan-700';
     if (lower.includes('pro')) return 'bg-violet-50 text-violet-700';
+    if (lower.includes('master')) return 'bg-yellow-50 text-yellow-700';
+    if (lower.includes('ultra')) return 'bg-orange-50 text-orange-700';
     return 'bg-slate-100 text-slate-700';
   }
 

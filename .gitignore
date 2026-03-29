@@ -10,6 +10,20 @@
 /out-tsc
 /bazel-out
 
+# supabase
+/supabase/*
+/supabase.exe
+/temp_cli
+# arquivos de teste
+/get-events.js
+/get-metadata.js
+/get-webhooks.mjs
+/inspect-events.js
+/test-*.js
+/trigger-webhook.js
+/fix-webhooks.cjs
+
+
 # Node
 node_modules/
 npm-debug.log

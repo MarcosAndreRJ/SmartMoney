@@ -74,7 +74,13 @@ interface Invoice {
                   <div class="flex items-center gap-2">
                     <mat-icon class="text-slate-400">event</mat-icon>
                     <p class="text-slate-500 text-sm">
-                      Próxima cobrança: <span class="font-bold text-slate-600">{{ userSubscription()?.end_date ? nextBillingDate() : '-' }}</span>
+                      @if (userSubscription()?.status === 'pending_cancellation') {
+                        Acesso premium até: <span class="font-bold text-slate-600">{{ userSubscription()?.end_date ? nextBillingDate() : '-' }}</span>
+                      } @else if (userSubscription()?.status === 'active' || userSubscription()?.status === 'trial') {
+                        Próxima cobrança: <span class="font-bold text-slate-600">{{ userSubscription()?.end_date ? nextBillingDate() : '-' }}</span>
+                      } @else {
+                        Cobrança: <span class="font-bold text-slate-600">Sem cobrança agendada</span>
+                      }
                     </p>
                   </div>
                   <div class="flex items-center gap-2">
@@ -90,9 +96,15 @@ interface Invoice {
                     Histórico de Faturas
                   </button>
                   @if (userSubscription()?.status === 'active' || userSubscription()?.status === 'pending_cancellation') {
-                    <button (click)="showCancelModal.set(true)" class="text-red-500 hover:text-red-600 font-bold text-sm transition-colors bg-transparent border-none p-0 inline-flex items-center">
+                    <button
+                      (click)="showCancelModal.set(true)"
+                      class="font-bold text-sm transition-colors bg-transparent border-none p-0 inline-flex items-center"
+                      [class.text-red-500]="userSubscription()?.status !== 'pending_cancellation'"
+                      [class.hover:text-red-600]="userSubscription()?.status !== 'pending_cancellation'"
+                      [class.text-emerald-600]="userSubscription()?.status === 'pending_cancellation'"
+                      [class.hover:text-emerald-700]="userSubscription()?.status === 'pending_cancellation'">
                       @if (userSubscription()?.status === 'pending_cancellation') {
-                        Ver Detalhes do Cancelamento
+                        Manter Assinatura
                       } @else {
                         Cancelar Assinatura
                       }
@@ -198,16 +210,16 @@ interface Invoice {
             </div>
             <h3 class="text-xl font-bold text-slate-900 mt-4">
               @if (userSubscription()?.status === 'pending_cancellation') {
-                Detalhes do Cancelamento
+                Manter Assinatura Ativa?
               } @else {
                 Cancelar Assinatura?
               }
             </h3>
             <p class="text-slate-500 mt-2">
               @if (userSubscription()?.status === 'pending_cancellation') {
-                Seu plano {{ currentPlanUI()?.name }} está agendado para cancelamento.
+                Seu plano {{ currentPlanUI()?.name }} está com cancelamento agendado.
                 @if (userSubscription()?.end_date) {
-                  Você perderá acesso aos recursos premium em {{ nextBillingDate() }}.
+                  Se você manter a assinatura, a cobrança continuará normalmente após {{ nextBillingDate() }}.
                 }
               } @else {
                 Você está prestes a cancelar seu plano {{ currentPlanUI()?.name }}.
@@ -220,12 +232,16 @@ interface Invoice {
           <div class="flex gap-4 mt-8">
             <button (click)="showCancelModal.set(false)" class="flex-1 py-3 border border-slate-200 text-slate-700 rounded-xl font-bold text-sm hover:bg-slate-50 transition-colors">
               @if (userSubscription()?.status === 'pending_cancellation') {
-                Fechar
+                Agora não
               } @else {
                 Manter Plano
               }
             </button>
-            @if (userSubscription()?.status !== 'pending_cancellation') {
+            @if (userSubscription()?.status === 'pending_cancellation') {
+              <button (click)="resumeSubscription()" class="flex-1 py-3 bg-emerald-600 text-white rounded-xl font-bold text-sm hover:bg-emerald-700 transition-colors">
+                Manter Assinatura
+              </button>
+            } @else {
               <button (click)="cancelSubscription()" class="flex-1 py-3 bg-red-500 text-white rounded-xl font-bold text-sm hover:bg-red-600 transition-colors">
                 Cancelar Agora
               </button>
@@ -384,7 +400,7 @@ export class SubscriptionPageComponent implements OnInit {
 
       const { data: activePlanData } = await this.supabaseService.client
         .from('active_user_plan')
-        .select('active_plan,is_premium_active')
+        .select('active_plan,is_premium_active,is_pending_cancellation,premium_end_date')
         .eq('user_id', user.id)
         .maybeSingle();
 
@@ -398,7 +414,8 @@ export class SubscriptionPageComponent implements OnInit {
             plans: premiumPlan,
             plan_name: premiumPlan.name,
             plan_price: Number(premiumPlan.price || 0),
-            status: 'active',
+            status: activePlanData?.is_pending_cancellation ? 'pending_cancellation' : 'active',
+            end_date: activePlanData?.premium_end_date || subscriptionData?.end_date,
             payment_gateway: 'stripe'
           } as any;
         }
@@ -431,6 +448,13 @@ export class SubscriptionPageComponent implements OnInit {
             restrictions: planData?.restrictions,
             plans: planData
           } as any;
+
+          if (
+            stripeSub.cancel_at_period_end === true &&
+            (stripeSub.status === 'active' || stripeSub.status === 'trialing')
+          ) {
+            (subscriptionData as any).status = 'pending_cancellation';
+          }
         }
       }
       
@@ -504,31 +528,77 @@ export class SubscriptionPageComponent implements OnInit {
 
     try {
       const result = await this.billingService.cancelSubscription(true);
-      this.userSubscription.update(s => ({ 
-        ...s, 
-        status: result.cancel_at_period_end ? 'pending_cancellation' : 'cancelled' 
-      }));
       this.showCancelModal.set(false);
-      
-      if (result.cancel_at_period_end && result.current_period_end) {
-        const endDate = new Date(result.current_period_end).toLocaleDateString('pt-BR', {
-          day: 'numeric', month: 'long', year: 'numeric'
-        });
-        alert(`Cancelamento agendado!\n\nVocê terá acesso até ${endDate}.\nApós isso, seu plano voltará para o Basic.`);
-      } else {
-        alert('Assinatura cancelada. Você terá acesso até ' + this.nextBillingDate());
-      }
-      
+
+      const endDate = result.current_period_end
+        ? new Date(result.current_period_end).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })
+        : undefined;
+
+      this.navService.subscriptionStatusContext.set({
+        action: 'cancel',
+        status: 'success',
+        title: 'Cancelamento agendado com sucesso',
+        message: endDate
+          ? `Seu acesso premium continua até ${endDate}. Depois disso, sua conta passa para o plano Basic automaticamente.`
+          : 'Seu cancelamento foi registrado e será aplicado no fim do período vigente.',
+        planName: this.currentPlanUI()?.name,
+        endDate
+      });
+
+      this.navService.navigateTo('subscription-status');
       await this.loadData();
     } catch (err) {
       console.error('Error cancelling subscription:', err);
-      alert(err instanceof Error ? err.message : 'Erro ao cancelar assinatura');
+      this.showCancelModal.set(false);
+      this.navService.subscriptionStatusContext.set({
+        action: 'cancel',
+        status: 'error',
+        title: 'Não foi possível cancelar agora',
+        message: err instanceof Error ? err.message : 'Erro ao cancelar assinatura',
+        planName: this.currentPlanUI()?.name
+      });
+      this.navService.navigateTo('subscription-status');
+    }
+  }
+
+  async resumeSubscription() {
+    try {
+      const result = await this.billingService.resumeSubscription();
+      this.showCancelModal.set(false);
+
+      const endDate = result.current_period_end
+        ? new Date(result.current_period_end).toLocaleDateString('pt-BR', { day: 'numeric', month: 'long', year: 'numeric' })
+        : undefined;
+
+      this.navService.subscriptionStatusContext.set({
+        action: 'resume',
+        status: 'success',
+        title: 'Assinatura mantida com sucesso',
+        message: endDate
+          ? `Sua assinatura continua ativa e sua próxima cobrança permanece prevista para ${endDate}.`
+          : 'Sua assinatura continua ativa normalmente.',
+        planName: this.currentPlanUI()?.name,
+        endDate
+      });
+
+      this.navService.navigateTo('subscription-status');
+      await this.loadData();
+    } catch (err) {
+      console.error('Error resuming subscription:', err);
+      this.showCancelModal.set(false);
+      this.navService.subscriptionStatusContext.set({
+        action: 'resume',
+        status: 'error',
+        title: 'Não foi possível manter a assinatura',
+        message: err instanceof Error ? err.message : 'Erro ao manter assinatura',
+        planName: this.currentPlanUI()?.name
+      });
+      this.navService.navigateTo('subscription-status');
     }
   }
 
   async confirmChangePlan() {
     const selected = this.selectedPlan();
-    const current = this.userSubscription();
     if (!selected) return;
 
     const isUpgrade = selected.action === 'upgrade';

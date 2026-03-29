@@ -34,6 +34,7 @@ import { DataManagementComponent } from './features/data-management/data-managem
 import { RecurringSchedulerService } from './core/services/recurring-scheduler.service';
 import { SubscriptionPageComponent } from './features/subscription/subscription-page.component';
 import { SubscriptionCheckoutComponent } from './features/subscription/subscription-checkout.component';
+import { SubscriptionStatusComponent } from './features/subscription/subscription-status.component';
 
 import { AdminLayoutComponent } from './features/admin/admin-layout.component';
 import { AdminDashboardComponent } from './features/admin/admin-dashboard/admin-dashboard.component';
@@ -54,7 +55,7 @@ import { AdminNotificationsComponent } from './features/admin/admin-notification
     ContactsComponent, NotificationsComponent, SharedAccountsComponent,
     RecurringTransactionsComponent, InvestmentsComponent, TransactionsPageComponent, LoansPageComponent, AuthComponent,
     ToastComponent, LoadingOverlayComponent, GoalContributionsPageComponent, DataManagementComponent,
-    CreditCardsPageComponent, SubscriptionPageComponent, SubscriptionCheckoutComponent,
+    CreditCardsPageComponent, SubscriptionPageComponent, SubscriptionCheckoutComponent, SubscriptionStatusComponent,
     AdminLayoutComponent, AdminDashboardComponent, AdminUsersComponent, AdminPlansComponent,
     AdminSubscriptionsComponent, AdminTransactionsComponent, AdminNotificationsComponent
   ],
@@ -130,6 +131,8 @@ import { AdminNotificationsComponent } from './features/admin/admin-notification
               <app-subscription-page></app-subscription-page>
             } @else if (currentView() === 'subscription-checkout') {
               <app-subscription-checkout></app-subscription-checkout>
+            } @else if (currentView() === 'subscription-status') {
+              <app-subscription-status></app-subscription-status>
             } @else if (currentView() === 'settings') {
               <div class="p-8 flex items-center justify-center h-full text-gray-400">
                 Settings view is coming soon...

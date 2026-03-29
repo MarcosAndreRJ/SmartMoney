@@ -98,7 +98,8 @@ export class SupabaseService {
 
   constructor() {
     const supabaseUrl = 'https://niobxjtufruqliakyydv.supabase.co';
-    const supabaseKey = 'sb_publishable_jNREjaQKul6ZCuSkgD1zpg_HmgOAdpG';
+    // Using the legacy anon JWT key — required for Edge Function auth validation (getUser)
+    const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im5pb2J4anR1ZnJ1cWxpYWt5eWR2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzMxNTQxOTgsImV4cCI6MjA4ODczMDE5OH0.i9K6Sy9N978npTaFkRKarRIit8MiInJjwZIJ7Ffc8bY';
     this.supabase = createClient(supabaseUrl, supabaseKey);
   }
 

@@ -4,9 +4,10 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { AdminService } from '../../../core/services/admin.service';
 import { NavigationService } from '../../../core/services/navigation.service';
+import { ToastService } from '../../../shared/services/toast.service';
 import { Plan } from '../../../core/models/admin.models';
 
-type PlanSlug = 'basic' | 'pro' | 'family';
+type PlanSlug = 'basic' | 'pro' | 'master' | 'ultra' | 'family';
 
 interface PlanForm {
   slug: PlanSlug;
@@ -38,7 +39,7 @@ const PLAN_PRESETS: Record<PlanSlug, Omit<PlanForm, 'price' | 'is_active'>> = {
       max_cards: 1
     },
     resources: {
-      account_transfers: true,
+      account_transfers: false,
       goals: false,
       loans: false,
       investments: false,
@@ -51,11 +52,45 @@ const PLAN_PRESETS: Record<PlanSlug, Omit<PlanForm, 'price' | 'is_active'>> = {
     name: 'Pro',
     description: 'Plano completo para uso individual',
     restrictions: {
+      max_accounts: 5,
+      max_cards: 3
+    },
+    resources: {
+      account_transfers: true,
+      goals: false,
+      loans: false,
+      investments: false,
+      whatsapp_entries: false,
+      shared_accounts: false
+    }
+  },
+  master: {
+    slug: 'master',
+    name: 'Master',
+    description: 'Plano com recursos master',
+    restrictions: {
       max_accounts: null,
       max_cards: null
     },
     resources: {
-      account_transfers: false,
+      account_transfers: true,
+      goals: true,
+      loans: true,
+      investments: true,
+      whatsapp_entries: true,
+      shared_accounts: false
+    }
+  },
+  ultra: {
+    slug: 'ultra',
+    name: 'Ultra',
+    description: 'Plano ultra para uso individual',
+    restrictions: {
+      max_accounts: null,
+      max_cards: null
+    },
+    resources: {
+      account_transfers: true,
       goals: true,
       loans: true,
       investments: true,
@@ -72,7 +107,7 @@ const PLAN_PRESETS: Record<PlanSlug, Omit<PlanForm, 'price' | 'is_active'>> = {
       max_cards: null
     },
     resources: {
-      account_transfers: false,
+      account_transfers: true,
       goals: true,
       loans: true,
       investments: true,
@@ -153,11 +188,16 @@ const PLAN_PRESETS: Record<PlanSlug, Omit<PlanForm, 'price' | 'is_active'>> = {
       </div>
 
       @if (showModal()) {
-        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-          <div class="bg-white rounded-2xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto">
-            <h2 class="text-xl font-bold text-slate-900 mb-4">
-              {{ editingPlan()?.id ? 'Editar Plano' : 'Criar Plano' }}
-            </h2>
+        <div class="fixed inset-0 bg-black/50 flex items-center justify-center z-50" (click)="closeModal()">
+          <div class="bg-white rounded-2xl p-6 w-full max-w-2xl mx-4 max-h-[90vh] overflow-y-auto" (click)="$event.stopPropagation()">
+            <div class="flex justify-between items-center mb-4">
+              <h2 class="text-xl font-bold text-slate-900">
+                {{ editingPlan()?.id ? 'Editar Plano' : 'Criar Plano' }}
+              </h2>
+              <button (click)="closeModal()" class="p-2 hover:bg-slate-100 rounded-lg transition-colors">
+                <mat-icon class="text-slate-400">close</mat-icon>
+              </button>
+            </div>
 
             <div class="space-y-4">
               <div>
@@ -267,8 +307,9 @@ const PLAN_PRESETS: Record<PlanSlug, Omit<PlanForm, 'price' | 'is_active'>> = {
                 Cancelar
               </button>
               <button (click)="savePlan()"
-                      class="flex-1 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors">
-                Salvar
+                      [disabled]="isLoading()"
+                      class="flex-1 px-4 py-2 bg-emerald-500 text-white rounded-lg hover:bg-emerald-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                {{ isLoading() ? 'Salvando...' : 'Salvar' }}
               </button>
             </div>
           </div>
@@ -280,14 +321,18 @@ const PLAN_PRESETS: Record<PlanSlug, Omit<PlanForm, 'price' | 'is_active'>> = {
 export class AdminPlansComponent implements OnInit {
   private adminService = inject(AdminService);
   private navSrv = inject(NavigationService);
+  private toastSrv = inject(ToastService);
 
   plans = signal<Plan[]>([]);
   showModal = signal(false);
+  isLoading = signal(false);
   editingPlan = signal<Plan | null>(null);
 
   planTypes: Array<{ value: PlanSlug; label: string }> = [
     { value: 'basic', label: 'Basic' },
     { value: 'pro', label: 'Pro' },
+    { value: 'master', label: 'Master' },
+    { value: 'ultra', label: 'Ultra' },
     { value: 'family', label: 'Family' }
   ];
 
@@ -327,7 +372,7 @@ export class AdminPlansComponent implements OnInit {
     const baseForm = this.createPlanForm(presetSlug);
 
     this.planForm = {
-      ...baseForm,
+      slug: plan.slug || presetSlug,
       name: plan.name,
       description: plan.description || baseForm.description,
       price: Number(plan.price),
@@ -401,9 +446,17 @@ export class AdminPlansComponent implements OnInit {
   }
 
   async savePlan() {
+    const parseNumber = (val: any): number => {
+      if (typeof val === 'number') return val;
+      if (!val) return 0;
+      const normalized = String(val).replace(',', '.');
+      const num = Number(normalized);
+      return isNaN(num) ? 0 : num;
+    };
+
     const restrictions = {
-      max_accounts: this.planForm.restrictions.max_accounts === null ? null : Number(this.planForm.restrictions.max_accounts),
-      max_cards: this.planForm.restrictions.max_cards === null ? null : Number(this.planForm.restrictions.max_cards)
+      max_accounts: this.planForm.restrictions.max_accounts === null ? null : parseNumber(this.planForm.restrictions.max_accounts),
+      max_cards: this.planForm.restrictions.max_cards === null ? null : parseNumber(this.planForm.restrictions.max_cards)
     };
 
     const features = this.buildHighlights(restrictions, this.planForm.resources);
@@ -412,24 +465,35 @@ export class AdminPlansComponent implements OnInit {
       slug: this.planForm.slug,
       name: this.planForm.name,
       description: this.planForm.description,
-      price: Number(this.planForm.price),
+      price: parseNumber(this.planForm.price),
       restrictions,
       resources: { ...this.planForm.resources },
       features,
       is_active: this.planForm.is_active
     };
 
-    let success: boolean;
+    this.isLoading.set(true);
+    try {
+      let success: boolean;
 
-    if (this.editingPlan()?.id) {
-      success = await this.adminService.updatePlan(this.editingPlan()!.id, planData);
-    } else {
-      success = await this.adminService.createPlan(planData);
-    }
+      if (this.editingPlan()?.id) {
+        success = await this.adminService.updatePlan(this.editingPlan()!.id, planData);
+      } else {
+        success = await this.adminService.createPlan(planData);
+      }
 
-    if (success) {
-      await this.loadPlans();
-      this.closeModal();
+      if (success) {
+        this.toastSrv.success('Sucesso', 'Plano salvo com sucesso!');
+        await this.loadPlans();
+        this.closeModal();
+      } else {
+        this.toastSrv.error('Erro', 'Nao foi possivel salvar o plano. Verifique os dados e tente novamente.');
+      }
+    } catch (error) {
+      console.error('Error saving plan:', error);
+      this.toastSrv.error('Erro', 'Ocorreu um erro inesperado ao salvar o plano.');
+    } finally {
+      this.isLoading.set(false);
     }
   }
 
@@ -457,6 +521,8 @@ export class AdminPlansComponent implements OnInit {
     const normalized = (value || '').toLowerCase();
     if (normalized.includes('family')) return 'family';
     if (normalized.includes('pro')) return 'pro';
+    if (normalized.includes('master')) return 'master';
+    if (normalized.includes('ultra')) return 'ultra';
     return 'basic';
   }
 

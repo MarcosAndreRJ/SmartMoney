@@ -3,8 +3,17 @@ import { Injectable, signal } from '@angular/core';
 export type AppView = 'dashboard' | 'accounts' | 'statement' | 'categories' | 'subcategories' | 'subcategory-form' |
     'profile' | 'goals' | 'goal-contributions' | 'contacts' | 'notifications' | 'shared-accounts' |
     'recurring' | 'budgets' | 'savings' | 'investments' | 'settings' | 'transactions' | 'all-transfers' | 'lancamentos' | 'loans' | 'data-management' | 'credit-cards' | 'subscription' |
-    'subscription-checkout' |
+    'subscription-checkout' | 'subscription-status' |
     'admin' | 'admin-dashboard' | 'admin-users' | 'admin-plans' | 'admin-subscriptions' | 'admin-transactions' | 'admin-notifications';
+
+export interface SubscriptionStatusContext {
+    action: 'cancel' | 'resume';
+    status: 'success' | 'error';
+    title: string;
+    message: string;
+    planName?: string;
+    endDate?: string;
+}
 
 @Injectable({
     providedIn: 'root'
@@ -15,6 +24,7 @@ export class NavigationService {
     selectedSubcategoryId = signal<string | null>(null);
     selectedAccountForStatement = signal<any>(null);
     selectedPlanId = signal<string | null>(null);
+    subscriptionStatusContext = signal<SubscriptionStatusContext | null>(null);
 
     navigateTo(view: AppView, params?: { categoryId?: string, subcategoryId?: string, account?: any }) {
         console.log(`NavigationService: Navigating to ${view}`, params);
