@@ -14,6 +14,7 @@ export interface Account {
   iconBgClass: string;
   iconColorClass: string;
   badgeClass: string;
+  color?: string;
 }
 
 @Component({
@@ -40,7 +41,7 @@ export interface Account {
             <!-- Bank Icon with colored initial -->
             <div 
               class="w-11 h-11 rounded-xl flex items-center justify-center shrink-0 shadow-md text-white text-lg font-black"
-              [style.backgroundColor]="getBrandColor(account().name)">
+              [style.backgroundColor]="account().color || getBrandColor(account().name)">
               {{ account().name.charAt(0).toUpperCase() }}
             </div>
             <div>

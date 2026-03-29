@@ -37,10 +37,16 @@
                 <p class="text-sm text-slate-400 font-bold uppercase tracking-wider mb-2">Gastos Mensais</p>
                 <h2 class="text-3xl font-black text-slate-900">{{ monthlySpending() | currency:'BRL':'symbol':'1.2-2' }}
                 </h2>
-                <p class="text-xs text-orange-500 mt-3 font-bold flex items-center gap-1">
-                    <mat-icon class="text-base">trending_up</mat-icon>
-                    +12.1% desde o mês passado
+                <p class="text-xs mt-3 font-bold flex items-center gap-1" [ngClass]="{'text-green-500': spendingChange() < 0, 'text-orange-500': spendingChange() >= 0}">
+                    <mat-icon class="text-base" [ngClass]="{'text-green-500': spendingChange() < 0, 'text-orange-500': spendingChange() >= 0}">
+                        {{ spendingChange() < 0 ? 'trending_down' : 'trending_up' }}
+                    </mat-icon>
+                    {{ spendingChange() | number:'1.1-1' }}% desde o mês passado
                 </p>
+            </div>
+            <div
+                class="absolute -right-4 -bottom-4 opacity-[0.03] group-hover:scale-110 transition-transform duration-700">
+                <mat-icon class="text-[120px]">account_balance_wallet</mat-icon>
             </div>
         </div>
 
@@ -78,7 +84,7 @@
                 class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
                 <div class="flex justify-between items-start mb-6">
                     <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg shadow-gray-100"
-                        [style.backgroundColor]="getBrandColor(account.institution_name)">
+                        [style.backgroundColor]="account.color || getBrandColor(account.institution_name)">
                         {{ account.institution_name.charAt(0).toUpperCase() }}
                     </div>
                     <button class="text-slate-300 hover:text-slate-600">

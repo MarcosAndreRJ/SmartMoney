@@ -44,20 +44,21 @@ export class AccountsListComponent implements OnInit {
     this.accounts().filter(a => a.account_type === 'credit_card')
   );
 
-  // Summary Totals
-  totalBalance = computed(() =>
-    this.bankAccounts().reduce((sum, a) => sum + (a.initial_balance || 0), 0)
-  );
+   // Summary Totals
+   totalBalance = computed(() =>
+     this.bankAccounts().reduce((sum, a) => sum + (a.initial_balance || 0), 0)
+   );
 
-  availableCredit = computed(() =>
-    this.creditCards().reduce((sum, a) => sum + (a.initial_balance || 0), 0)
-  );
+   availableCredit = computed(() =>
+     this.creditCards().reduce((sum, a) => sum + (a.initial_balance || 0), 0)
+   );
 
-  monthlySpending = signal(8120.50); // Mocked for design parity
+   monthlySpending = signal(0);
+   spendingChange = signal(0);
 
-  async ngOnInit() {
-    await this.loadAccounts();
-  }
+   async ngOnInit() {
+     await this.loadAccounts();
+   }
 
   async loadAccounts() {
     this.isLoading.set(true);
@@ -67,6 +68,13 @@ export class AccountsListComponent implements OnInit {
       const { data, error } = await this.supabase.getAccounts();
       if (data && !error) {
         this.accounts.set(data as SupabaseAccount[]);
+      }
+
+      // Load dashboard summary for stats
+      const summary = await this.supabase.getDashboardSummary();
+      if (summary) {
+        this.monthlySpending.set(summary.stats.monthlySpending);
+        this.spendingChange.set(summary.stats.spendingChange);
       }
     } finally {
       this.isLoading.set(false);
@@ -83,6 +91,7 @@ export class AccountsListComponent implements OnInit {
       balanceLabel: account.account_type === 'credit_card' ? 'Limite Disponível' : 'Saldo Atual',
       details: this.getAccountTypeLabel(account.account_type),
       icon: account.icon,
+      color: account.color,
       iconBgClass: 'bg-slate-50',
       iconColorClass: 'text-slate-900',
       badgeClass: 'bg-slate-100'
@@ -98,6 +107,7 @@ export class AccountsListComponent implements OnInit {
       balanceLabel: account.account_type === 'credit_card' ? 'Limite Disponível' : 'Saldo Atual',
       details: this.getAccountTypeLabel(account.account_type),
       icon: account.icon,
+      color: account.color,
       iconBgClass: 'bg-slate-50',
       iconColorClass: 'text-slate-900',
       badgeClass: 'bg-slate-100'

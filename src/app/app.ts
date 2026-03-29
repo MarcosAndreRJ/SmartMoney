@@ -56,7 +56,7 @@ import { AdminNotificationsComponent } from './features/admin/admin-notification
     RecurringTransactionsComponent, InvestmentsComponent, TransactionsPageComponent, LoansPageComponent, AuthComponent,
     ToastComponent, LoadingOverlayComponent, GoalContributionsPageComponent, DataManagementComponent,
     CreditCardsPageComponent, SubscriptionPageComponent, SubscriptionCheckoutComponent, SubscriptionStatusComponent,
-    AdminLayoutComponent, AdminDashboardComponent, AdminUsersComponent, AdminPlansComponent,
+    AdminDashboardComponent, AdminUsersComponent, AdminPlansComponent,
     AdminSubscriptionsComponent, AdminTransactionsComponent, AdminNotificationsComponent
   ],
   template: `

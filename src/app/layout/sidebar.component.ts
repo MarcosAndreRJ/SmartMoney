@@ -19,8 +19,8 @@ interface NavItem {
   template: `
     <aside class="w-64 h-screen bg-white border-r border-slate-200 flex flex-col fixed left-0 top-0 z-30">
       <!-- Logo -->
-      <div class="p-6 flex items-center gap-3 border-b border-slate-100">
-        <img src="/assets/logo-smartkonta.png" alt="SmartKonta" class="w-9 h-9 object-contain" />
+      <div class="p-2 pl-5 flex items-center gap-0 border-b border-slate-100">
+        <img src="/assets/logo_clean_pq.png" alt="SmartKonta" class="w-13 h-13 object-contain" />
         <div>
           <h1 class="font-extrabold text-[1.35rem] leading-tight text-transparent bg-clip-text bg-gradient-to-r from-[#6C2BD9] to-[#A21CAF]">{{ brandName() }}</h1>
           <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{{ planName() }} Account</p>
