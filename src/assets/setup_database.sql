@@ -59,3 +59,27 @@ WITH CHECK (auth.uid() = user_id);
 CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON public.accounts(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON public.transactions(user_id);
 CREATE INDEX IF NOT EXISTS idx_transactions_account_id ON public.transactions(account_id);
+
+-- 5. TABELA DE LANÇAMENTOS DE CARTÃO (CREDIT_CARD_TRANSACTIONS)
+CREATE TABLE IF NOT EXISTS public.credit_card_transactions (
+    id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+    user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
+    card_id UUID REFERENCES public.accounts(id) ON DELETE CASCADE NOT NULL,
+    description TEXT NOT NULL,
+    amount NUMERIC NOT NULL,
+    date TIMESTAMPTZ DEFAULT now(),
+    category TEXT,
+    status TEXT NOT NULL DEFAULT 'confirmed' CHECK (status IN ('confirmed', 'pending', 'cancelled')),
+    created_at TIMESTAMPTZ DEFAULT now()
+);
+
+ALTER TABLE public.credit_card_transactions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Users can manage their own credit card transactions"
+ON public.credit_card_transactions FOR ALL
+TO authenticated
+USING (auth.uid() = user_id)
+WITH CHECK (auth.uid() = user_id);
+
+CREATE INDEX IF NOT EXISTS idx_credit_card_transactions_user_id ON public.credit_card_transactions(user_id);
+CREATE INDEX IF NOT EXISTS idx_credit_card_transactions_card_id ON public.credit_card_transactions(card_id);

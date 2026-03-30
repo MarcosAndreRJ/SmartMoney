@@ -30,6 +30,18 @@ export interface SupabaseTransaction {
   recurring_source_id?: string;
 }
 
+export interface SupabaseCardTransaction {
+  id: string;
+  user_id: string;
+  card_id: string;
+  description: string;
+  amount: number;
+  date: string;
+  category: string;
+  status: 'confirmed' | 'pending' | 'cancelled';
+  created_at: string;
+}
+
 export interface SupabaseContact {
   id: string;
   user_id: string;
@@ -206,6 +218,48 @@ export class SupabaseService {
     return await this.supabase
       .from('transactions')
       .insert([{ ...txData, user_id: user.id }])
+      .select()
+      .single();
+  }
+
+  // Credit Card Transaction Management
+  async getCardTransactions(cardId?: string) {
+    const user = await this.getUser();
+    if (!user) return { data: [], error: new Error('User not authenticated') };
+
+    let query = this.supabase
+      .from('credit_card_transactions')
+      .select('*')
+      .eq('user_id', user.id)
+      .order('date', { ascending: false });
+
+    if (cardId) {
+      query = query.eq('card_id', cardId);
+    }
+
+    return await query;
+  }
+
+  async createCardTransaction(txData: Partial<SupabaseCardTransaction>) {
+    const user = await this.getUser();
+    if (!user) return { data: null, error: new Error('User not authenticated') };
+
+    return await this.supabase
+      .from('credit_card_transactions')
+      .insert([{ ...txData, user_id: user.id }])
+      .select()
+      .single();
+  }
+
+  async updateCardTransaction(id: string, updates: Partial<SupabaseCardTransaction>) {
+    const user = await this.getUser();
+    if (!user) return { data: null, error: new Error('User not authenticated') };
+
+    return await this.supabase
+      .from('credit_card_transactions')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', user.id)
       .select()
       .single();
   }
@@ -422,7 +476,8 @@ export class SupabaseService {
       goalRes, 
       goalContribRes,
       catRes,
-      recurringRes
+      recurringRes,
+      cardTxRes
     ] = await Promise.all([
       this.getAccounts(),
       this.supabase.from('transactions').select('*').eq('user_id', user.id).order('date', { ascending: false }),
@@ -430,7 +485,8 @@ export class SupabaseService {
       this.supabase.from('goals').select('*').eq('user_id', user.id),
       this.supabase.from('goal_contributions').select('*').eq('user_id', user.id),
       this.supabase.from('categories').select('*').eq('user_id', user.id),
-      this.supabase.from('recurring_transactions').select('*').eq('user_id', user.id).eq('is_active', true)
+      this.supabase.from('recurring_transactions').select('*').eq('user_id', user.id).eq('is_active', true),
+      this.supabase.from('credit_card_transactions').select('*').eq('user_id', user.id).order('date', { ascending: false })
     ]);
 
     const accounts = accRes.data || [];
@@ -440,6 +496,7 @@ export class SupabaseService {
     const goalContributions = goalContribRes.data || [];
     const categories = catRes.data || [];
     const recurringTransactions = recurringRes.data || [];
+    const cardTransactions = cardTxRes.data || [];
 
     const now = new Date();
     const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -522,17 +579,13 @@ export class SupabaseService {
     const creditCards = accounts
       .filter(acc => acc.account_type === 'credit_card')
       .map(card => {
-        const cardExpenses = transactions
-          .filter(tx => tx.account_id === card.id && tx.type === 'expense' && tx.status === 'confirmed')
-          .reduce((sum, tx) => sum + Number(tx.amount), 0);
-        const cardIncomes = transactions
-          .filter(tx => tx.account_id === card.id && tx.type === 'income' && tx.status === 'confirmed')
-          .reduce((sum, tx) => sum + Number(tx.amount), 0);
-        
-        const currentBill = cardExpenses - cardIncomes;
+        const currentBill = cardTransactions
+          .filter((tx: any) => tx.card_id === card.id && tx.status === 'confirmed')
+          .reduce((sum: number, tx: any) => sum + Number(tx.amount), 0);
+
         return {
           id: card.id,
-          name: card.name,
+          name: card.institution_name,
           lastDigits: card.account_number?.slice(-4) || '0000',
           currentBill,
           limit: Number(card.credit_limit || 0),
@@ -640,4 +693,3 @@ export class SupabaseService {
     };
   }
 }
-

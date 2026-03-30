@@ -186,37 +186,64 @@
   - Todas as tabelas custom devem ter políticas `using (auth.uid() = user_id)`
   - Falta aqui = vazamento de dados entre usuários
 
-## 11. O QUE PRECISA SER IMPLEMENTADO OU ALTERADO
-- **Alvo imediato**: Validar e estabilizar fluxo de webhook Stripe → Supabase → UI
-  1. **Confirmar secret do webhook**:
-     - No Stripe Dashboard: verificar endpoint `stripe-webhook` e seu `Signing Secret`
-     - No Supabase: garantir que `STRIPE_WEBHOOK_SECRET` (em variáveis de ambiente da função) bata exatamente
-     - Se houver múltiplos secrets (rotação), usar formato `secret1,secret2` na variável
-  2. **Teste de ponta a ponta**:
-     - Criar usuário de teste no Supabase
-     - Iniciar checkout para plano Pro via frontend
-     - Completar pagamento no Stripe (modo teste com cartão 4242...)
-     - Verificar logs da função `stripe-webhook`:
-       - `[Webhook] Signature validated with configured secret`
-       - `[Webhook] Event type: checkout.session.completed`
-       - `[Webhook] user_subscriptions upsert result: { ... }`
-       - `[Webhook] user_subscriptions confirm read: { ... }`
-     - Confirmar que usuário vê plano Pro ativo na UI após refresh
-  3. **Validar fluxos de downgrade/cancelamento**:
-     - Com assinatura ativa Pro:
-       - Testar downgrade para Basic: deve agendar mudança para fim do período (sem alerta imediato)
-       - Testar cancelamento: deve agendar fim de acesso (não remover imediato)
-     - Verificar no Stripe Dashboard que assinatura tem:
-       - Para downgrade: `items[0].price` = preço do plano básico no próximo ciclo
-       - Para cancelamento: `cancel_at_period_end = true`
-  4. **Corrigir pontos de falha conhecida**:
-     - Se webhook ainda retornar 400 intermitentemente:
-       - Verificar se há mais de um endpoint webhook no Stripe apontando para mesma URL
-       - Garantir que apenas **um** endpoint esteja ativo (outros causam conflito de secret)
-       - No Stripe Dashboard: Developers → Webhooks → [endpoint] → "Delete" se duplicado
-  5. **Melhorar observabilidade**:
-     - Adicionar `event.id` aos logs do webhook para rastreabilidade
-     - Logar `subscription.id` e `customer.id` em todos os eventos de assinatura
-     - Em caso de erro de sync, lançar exceção com contexto (não silent fail)
+## 11. IMPLEMENTAÇÃO ATUAL E PRÓXIMOS PASSOS
 
-> **Nota de execução**: Todas as alterações devem ser feitas em ambiente de homologação primeiro. O webhook Stripe em modo teste aceita apenas cartões de teste da Stripe (ex: 4242 4242 4242 4242). Nunca usar chaves de produção em testes.
+### ✅ Já Implementado
+
+| Componente | Status | Descrição |
+|------------|--------|-----------|
+| `create-checkout` | ✅ Pronto | Cria sessão Stripe Checkout para upgrade de plano |
+| `stripe-webhook` | ✅ Pronto | Processa webhooks do Stripe e sincroniza com banco |
+| `manage-subscription` | ✅ Pronto | Gerencia cancel, update e resume de assinaturas |
+| Frontend UI | ✅ Pronto | Tela de planos com destaque inteligente e modal de confirmação |
+| Tela de Status | ✅ Pronto | Página de resultado após operações de assinatura |
+
+### Edge Functions Deployadas
+
+1. **create-checkout** (`/functions/v1/create-checkout`)
+   - Ação: Criar sessão de checkout Stripe
+   - Parâmetros: `priceId`
+   - Valida priceId contra lista de IDs permitidos
+
+2. **stripe-webhook** (`/functions/v1/stripe-webhook`)
+   - Ação: Receber e processar eventos do Stripe
+   - Eventos processados: `checkout.session.completed`, `customer.subscription.created/updated/deleted`
+   - Suporta múltiplos secrets (formato: `secret1,secret2`)
+   - Logging de diagnóstico implementado
+   - Grava em `user_subscriptions` + fallback para `subscriptions`
+
+3. **manage-subscription** (`/functions/v1/manage-subscription`)
+   - Ação `cancel`: Agenda cancelamento (`cancel_at_period_end: true`)
+   - Ação `resume`: Remove cancelamento agendado (`cancel_at_period_end: false`)
+   - Ação `update`: Altera plano com `proration_behavior: 'none'`
+
+### ⚠️ Pendente de Validação
+
+1. **Teste de ponta a ponta completo**:
+   - Criar checkout real via frontend
+   - Completar pagamento no Stripe (modo teste)
+   - Verificar se webhook grava corretamente em `user_subscriptions`
+   - Confirmar que UI exibe plano ativo após webhook
+
+2. **Debug de erro de assinatura (intermitente)**:
+   - Alguns requests retornam 400 com erro de assinatura
+   - Possível causa: múltiplos endpoints webhook no Stripe ou mismatch de secret
+   - Ação: Verificar no Stripe Dashboard se há mais de um endpoint configurado
+
+3. **Validar fluxo completo de downgrade/cancelamento**:
+   - Testar botão "Fazer Downgrade" → deve chamar API sem redirecionar
+   - Testar botão "Cancelar Assinatura" → deve agendar para fim do período
+
+### 📋 Checklist de Verificação
+
+- [ ] Confirmar secret do webhook no Supabase bate com Stripe Dashboard
+- [ ] Não há endpoints webhook duplicados no Stripe
+- [ ] Checkout cria sessão e retorna URL corretamente
+- [ ] Pagamento no Stripe redireciona de volta para app
+- [ ] Webhook recebe evento e grava em `user_subscriptions`
+- [ ] UI atualiza para mostrar plano ativo após pagamento
+- [ ] Downgrade agenda mudança sem cobrança imediata
+- [ ] Cancelamento agenda fim de acesso sem remover imediato
+- [ ] "Manter Assinatura" remove cancelamento agendado
+
+> **Nota**: Em modo teste, usar cartão 4242 4242 4242 4242. Nunca usar chaves de produção em ambiente de desenvolvimento.

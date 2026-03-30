@@ -2,7 +2,7 @@ import { Component, inject, OnInit, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { SupabaseService, SupabaseAccount, SupabaseTransaction } from '../../core/services/supabase.service';
+import { SupabaseService, SupabaseAccount, SupabaseTransaction, SupabaseCardTransaction } from '../../core/services/supabase.service';
 import { ToastService } from '../../shared/services/toast.service';
 import { NavigationService } from '../../core/services/navigation.service';
 
@@ -13,7 +13,7 @@ interface CardBill {
   available: number;
   lastDigits: string;
   color: string;
-  transactions: SupabaseTransaction[];
+  transactions: SupabaseCardTransaction[];
 }
 
 interface CategorySummary {
@@ -491,6 +491,7 @@ export class CreditCardsPageComponent implements OnInit {
   showDrawer = signal(false);
   allAccounts = signal<SupabaseAccount[]>([]);
   allTransactions = signal<SupabaseTransaction[]>([]);
+  allCardTransactions = signal<SupabaseCardTransaction[]>([]);
   selectedCardId = signal<string>('');
   searchQuery = signal('');
 
@@ -525,13 +526,13 @@ export class CreditCardsPageComponent implements OnInit {
 
   cardBills = computed<CardBill[]>(() => {
     const cards = this.allAccounts().filter(a => a.account_type === 'credit_card');
-    const transactions = this.allTransactions();
+    const cardTransactions = this.allCardTransactions();
 
     return cards.map(card => {
-      const cardTxs = transactions.filter(tx => tx.account_id === card.id);
-      const totalExpense = cardTxs.filter(tx => tx.type === 'expense' && tx.status === 'confirmed').reduce((s, t) => s + Number(t.amount), 0);
-      const totalIncome = cardTxs.filter(tx => tx.type === 'income' && tx.status === 'confirmed').reduce((s, t) => s + Number(t.amount), 0);
-      const currentBill = Math.max(0, totalExpense - totalIncome);
+      const cardTxs = cardTransactions.filter(tx => tx.card_id === card.id);
+      const currentBill = Math.max(0, cardTxs
+        .filter(tx => tx.status === 'confirmed')
+        .reduce((s, t) => s + Number(t.amount), 0));
       const limit = Number(card.credit_limit || 0);
       const available = Math.max(0, limit - currentBill);
 
@@ -568,7 +569,7 @@ export class CreditCardsPageComponent implements OnInit {
 
     const catMap = new Map<string, number>();
     bill.transactions
-      .filter(tx => tx.type === 'expense' && tx.status === 'confirmed')
+      .filter(tx => tx.status === 'confirmed')
       .forEach(tx => {
         const cat = tx.category || 'Outros';
         catMap.set(cat, (catMap.get(cat) || 0) + Number(tx.amount));
@@ -597,14 +598,16 @@ export class CreditCardsPageComponent implements OnInit {
   });
 
   async ngOnInit() {
+    await this.reloadData();
+  }
+
+  private async reloadData() {
     this.isLoading.set(true);
     try {
-      const [accRes, txRes] = await Promise.all([
+      const [accRes, txRes, cardTxRes] = await Promise.all([
         this.supabase.getAccounts(),
-        this.supabase.client
-          .from('transactions')
-          .select('*')
-          .order('date', { ascending: false })
+        this.supabase.getTransactions(),
+        this.supabase.getCardTransactions()
       ]);
 
       if (accRes.data) {
@@ -612,6 +615,9 @@ export class CreditCardsPageComponent implements OnInit {
       }
       if (txRes.data) {
         this.allTransactions.set(txRes.data as SupabaseTransaction[]);
+      }
+      if (cardTxRes.data) {
+        this.allCardTransactions.set(cardTxRes.data as SupabaseCardTransaction[]);
       }
 
       // Auto-select first card
@@ -631,9 +637,9 @@ export class CreditCardsPageComponent implements OnInit {
     if (!this.isBestPeriodToBuy()) return false;
 
     // Verificar se já existe um lançamento de pagamento este mês/ciclo
-    const hasPayment = bill.transactions.some(tx => 
-      tx.type === 'income' && 
+    const hasPayment = this.allTransactions().some(tx =>
       tx.description.includes('Pagamento Fatura') &&
+      tx.description.includes(bill.card.institution_name) &&
       new Date(tx.date).getMonth() === new Date().getMonth()
     );
 
@@ -646,29 +652,32 @@ export class CreditCardsPageComponent implements OnInit {
 
     this.isSaving.set(true);
     try {
+      const paymentAccount = this.getBillPaymentAccount();
+      if (!paymentAccount) {
+        this.toast.show('error', 'Conta não encontrada', 'Cadastre uma conta corrente para lançar o pagamento da fatura.');
+        return;
+      }
+
       const now = new Date();
       const monthYear = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-      
-      const newTx = {
-        user_id: (await this.supabase.client.auth.getUser()).data.user?.id,
-        account_id: bill.card.id,
+
+      const newTx: Partial<SupabaseTransaction> = {
+        account_id: paymentAccount.id,
         description: `Pagamento Fatura - ${bill.card.institution_name} - ${monthYear}`,
         amount: bill.currentBill,
         date: now.toLocaleDateString('en-CA'),
         category: 'Pagamento',
-        type: 'income',
+        type: 'expense',
         status: 'pending'
       };
 
-      const { error } = await this.supabase.client.from('transactions').insert([newTx]);
+      const { error } = await this.supabase.createTransaction(newTx);
 
       if (error) throw error;
 
       this.toast.show('success', 'Sucesso', 'Fatura lançada com sucesso!');
-      
-      // Reload and refresh
-      const txRes = await this.supabase.client.from('transactions').select('*').order('date', { ascending: false });
-      if (txRes.data) this.allTransactions.set(txRes.data as SupabaseTransaction[]);
+
+      await this.reloadData();
 
     } catch (err) {
       console.error(err);
@@ -684,9 +693,9 @@ export class CreditCardsPageComponent implements OnInit {
     if (!this.isBestPeriodToBuy()) return false;
 
     // Check if there's already a CONFIRMED payment this month
-    const hasConfirmedPayment = bill.transactions.some(tx => 
-      tx.type === 'income' && 
+    const hasConfirmedPayment = this.allTransactions().some(tx =>
       tx.description.includes('Pagamento Fatura') &&
+      tx.description.includes(bill.card.institution_name) &&
       tx.status === 'confirmed' &&
       new Date(tx.date).getMonth() === new Date().getMonth()
     );
@@ -700,10 +709,16 @@ export class CreditCardsPageComponent implements OnInit {
 
     this.isSaving.set(true);
     try {
+      const paymentAccount = this.getBillPaymentAccount();
+      if (!paymentAccount) {
+        this.toast.show('error', 'Conta não encontrada', 'Cadastre uma conta corrente para pagar a fatura.');
+        return;
+      }
+
       // Find if there's a pending payment
-      const pendingPayment = bill.transactions.find(tx => 
-        tx.type === 'income' && 
+      const pendingPayment = this.allTransactions().find(tx =>
         tx.description.includes('Pagamento Fatura') &&
+        tx.description.includes(bill.card.institution_name) &&
         tx.status === 'pending' &&
         new Date(tx.date).getMonth() === new Date().getMonth()
       );
@@ -719,25 +734,22 @@ export class CreditCardsPageComponent implements OnInit {
         // Create new confirmed payment
         const now = new Date();
         const monthYear = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-        const newTx = {
-          user_id: (await this.supabase.client.auth.getUser()).data.user?.id,
-          account_id: bill.card.id,
+        const newTx: Partial<SupabaseTransaction> = {
+          account_id: paymentAccount.id,
           description: `Pagamento Fatura - ${bill.card.institution_name} - ${monthYear}`,
           amount: bill.currentBill,
           date: now.toLocaleDateString('en-CA'),
           category: 'Pagamento',
-          type: 'income',
+          type: 'expense',
           status: 'confirmed'
         };
-        const { error } = await this.supabase.client.from('transactions').insert([newTx]);
+        const { error } = await this.supabase.createTransaction(newTx);
         if (error) throw error;
       }
 
       this.toast.show('success', 'Sucesso', 'Fatura atualizada como paga!');
       
-      // Reload and refresh
-      const txRes = await this.supabase.client.from('transactions').select('*').order('date', { ascending: false });
-      if (txRes.data) this.allTransactions.set(txRes.data as SupabaseTransaction[]);
+      await this.reloadData();
 
     } catch (err) {
       console.error(err);
@@ -771,13 +783,12 @@ export class CreditCardsPageComponent implements OnInit {
 
     this.isSaving.set(true);
     try {
-      const { error } = await this.supabase.createTransaction({
-        account_id: this.launchForm.cardId,
+      const { error } = await this.supabase.createCardTransaction({
+        card_id: this.launchForm.cardId,
         description: this.launchForm.description.trim(),
         amount: this.launchForm.amount,
         date: this.launchForm.date,
         category: this.launchForm.category || 'Outros',
-        type: 'expense',
         status: this.launchForm.status
       });
 
@@ -797,9 +808,7 @@ export class CreditCardsPageComponent implements OnInit {
         status: 'confirmed'
       };
 
-      // Reload data
-      const txRes = await this.supabase.client.from('transactions').select('*').order('date', { ascending: false });
-      if (txRes.data) this.allTransactions.set(txRes.data as SupabaseTransaction[]);
+      await this.reloadData();
 
     } catch {
       this.toast.show('error', 'Erro', 'Erro ao salvar lançamento.');
@@ -871,7 +880,23 @@ export class CreditCardsPageComponent implements OnInit {
     return catColors[(category || '').toLowerCase()] || '#64748b';
   }
 
-  getTxIcon(tx: SupabaseTransaction): { icon: string; bg: string; color: string } {
+  private getBillPaymentAccount(): SupabaseAccount | null {
+    const nonCardAccounts = this.allAccounts().filter(a => a.account_type !== 'credit_card');
+    if (nonCardAccounts.length === 0) return null;
+
+    const mainChecking = nonCardAccounts.find(a => a.account_type === 'checking' && a.is_main_account);
+    if (mainChecking) return mainChecking;
+
+    const firstChecking = nonCardAccounts.find(a => a.account_type === 'checking');
+    if (firstChecking) return firstChecking;
+
+    const mainAny = nonCardAccounts.find(a => a.is_main_account);
+    if (mainAny) return mainAny;
+
+    return nonCardAccounts[0] ?? null;
+  }
+
+  getTxIcon(tx: SupabaseCardTransaction): { icon: string; bg: string; color: string } {
     const categoryMap: Record<string, { icon: string; bg: string; color: string }> = {
       alimentacao: { icon: 'restaurant', bg: 'bg-orange-50', color: 'text-orange-500' },
       alimentação: { icon: 'restaurant', bg: 'bg-orange-50', color: 'text-orange-500' },
