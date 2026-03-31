@@ -3,6 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { SupabaseService, SupabaseTransaction, SupabaseAccount } from '../../core/services/supabase.service';
+import { TransactionFormComponent } from './transaction-form.component';
 
 interface TransactionGroup {
   label: string;
@@ -16,7 +17,7 @@ type TxTypeFilter = 'all' | 'income' | 'expense' | 'transfer';
 @Component({
   selector: 'app-transactions-page',
   standalone: true,
-  imports: [CommonModule, MatIconModule, FormsModule],
+  imports: [CommonModule, MatIconModule, FormsModule, TransactionFormComponent],
   template: `
     <div class="p-8 max-w-7xl mx-auto space-y-8 pb-20">
 
@@ -26,7 +27,9 @@ type TxTypeFilter = 'all' | 'income' | 'expense' | 'transfer';
           <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Transações</h1>
           <p class="text-slate-500 mt-1 font-medium">Histórico completo de movimentações financeiras.</p>
         </div>
-        <button class="px-6 py-3 bg-[#0F172A] text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg flex items-center gap-2">
+        <button 
+          (click)="showTransactionForm.set(true)"
+          class="px-6 py-3 bg-[#0F172A] text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg flex items-center gap-2">
           <mat-icon class="text-lg">add</mat-icon>
           Nova Transação
         </button>
@@ -552,6 +555,14 @@ type TxTypeFilter = 'all' | 'income' | 'expense' | 'transfer';
           </div>
         </div>
       }
+
+      <!-- New Transaction Form Sidebar -->
+      @if (showTransactionForm()) {
+        <app-transaction-form 
+          (formClose)="showTransactionForm.set(false)"
+          (formSave)="onTransactionSaved()">
+        </app-transaction-form>
+      }
     </div>
   `
 })
@@ -570,6 +581,7 @@ export class TransactionsPageComponent implements OnInit {
 
   // Modal State
   showCustomFilterModal = signal(false);
+  showTransactionForm = signal(false);
   customStartDate = signal<string>('');
   customEndDate = signal<string>('');
   customTypes = signal({ income: false, expense: false, transfer: false, goal: false, investment: false });
@@ -740,6 +752,12 @@ export class TransactionsPageComponent implements OnInit {
   private async loadAccounts() {
     const { data } = await this.supabase.getAccounts();
     if (data) this.accounts.set(data as SupabaseAccount[]);
+  }
+
+  async onTransactionSaved() {
+    await this.loadTransactions();
+    // Also refresh accounts in case balance changed
+    await this.loadAccounts();
   }
 
   // ── Payment Modal Logic ───────────────────────────────────────────────────

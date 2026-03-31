@@ -513,30 +513,37 @@ export class SupabaseService {
     
     const totalBalance = initialBalanceSum + totalIncome - totalExpense;
 
-    const monthlySpending = transactions
-      .filter(tx => {
+    const monthlySpending = [
+      ...transactions.filter(tx => {
         const txDateStr = (tx.date || '').split('T')[0];
         const txDate = new Date(txDateStr + 'T12:00:00');
         const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
-        // Exclude internal transfers (identified by category 'Transferência' for now as per user hint)
-        return tx.type === 'expense' && 
-               tx.status === 'confirmed' && 
-               tx.category !== 'Transferência' &&
-               txDate >= startOfMonth;
+        return tx.type === 'expense' && tx.status === 'confirmed' && tx.category !== 'Transferência' && txDate >= startOfMonth;
+      }),
+      ...cardTransactions.filter((tx: any) => {
+        const txDateStr = (tx.date || '').split('T')[0];
+        const txDate = new Date(txDateStr + 'T12:00:00');
+        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0);
+        return tx.status === 'confirmed' && txDate >= startOfMonth;
       })
-      .reduce((sum, tx) => sum + Number(tx.amount), 0);
+    ].reduce((sum, tx) => sum + Number(tx.amount), 0);
 
     // Calculate changes for stats
     const lastMonthFirst = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0);
     const lastMonthLast = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
     
-    const lastMonthSpending = transactions
-      .filter(tx => {
+    const lastMonthSpending = [
+      ...transactions.filter(tx => {
         const txDateStr = (tx.date || '').split('T')[0];
         const txDate = new Date(txDateStr + 'T12:00:00');
         return tx.type === 'expense' && tx.status === 'confirmed' && txDate >= lastMonthFirst && txDate <= lastMonthLast;
+      }),
+      ...cardTransactions.filter((tx: any) => {
+        const txDateStr = (tx.date || '').split('T')[0];
+        const txDate = new Date(txDateStr + 'T12:00:00');
+        return tx.status === 'confirmed' && txDate >= lastMonthFirst && txDate <= lastMonthLast;
       })
-      .reduce((sum, tx) => sum + Number(tx.amount), 0);
+    ].reduce((sum, tx) => sum + Number(tx.amount), 0);
     
     const thisMonthNet = transactions
       .filter(tx => {
@@ -620,16 +627,25 @@ export class SupabaseService {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     
     const categorySpending = categories.map(cat => {
-      const amount = transactions
+      const amountFromTransactions = transactions
         .filter(tx => {
           const txDateStr = (tx.date || '').split('T')[0];
           const txDate = new Date(txDateStr + 'T12:00:00');
           return tx.category === cat.name && tx.type === 'expense' && tx.status === 'confirmed' && txDate >= thirtyDaysAgo;
         })
         .reduce((sum, tx) => sum + Number(tx.amount), 0);
+
+      const amountFromCards = cardTransactions
+        .filter((tx: any) => {
+          const txDateStr = (tx.date || '').split('T')[0];
+          const txDate = new Date(txDateStr + 'T12:00:00');
+          return tx.category === cat.name && tx.status === 'confirmed' && txDate >= thirtyDaysAgo;
+        })
+        .reduce((sum, tx) => sum + Number(tx.amount), 0);
+
       return {
         name: cat.name,
-        amount,
+        amount: amountFromTransactions + amountFromCards,
         icon: cat.icon || 'category',
         color: cat.color || '#cbd5e1'
       };
@@ -682,7 +698,11 @@ export class SupabaseService {
       goals: goalsWithProgress.slice(0, 3),
       categorySpending,
       heritageEvolution,
-      recentTransactions: transactions.slice(0, 5).map(tx => {
+      recentTransactions: [
+        ...transactions,
+        ...cardTransactions.map((tx: any) => ({ ...tx, type: 'expense' }))
+      ].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 5).map(tx => {
         const cat = categories.find(c => c.name === tx.category);
         return {
           ...tx,

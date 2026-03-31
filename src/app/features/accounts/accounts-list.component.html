@@ -83,8 +83,9 @@
             <div (click)="openDetails(account)"
                 class="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-xl hover:-translate-y-1 transition-all cursor-pointer group">
                 <div class="flex justify-between items-start mb-6">
-                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg shadow-gray-100"
-                        [style.backgroundColor]="account.color || getBrandColor(account.institution_name)">
+                    <div class="w-12 h-12 rounded-2xl flex items-center justify-center text-white text-xl font-black shadow-lg"
+                        [style.backgroundColor]="account.color || '#0FB981'"
+                        [style.boxShadow]="'0 8px 16px -4px ' + (account.color || '#0FB981') + '40'">
                         {{ account.institution_name.charAt(0).toUpperCase() }}
                     </div>
                     <button class="text-slate-300 hover:text-slate-600">
@@ -130,12 +131,14 @@
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
             @for (card of creditCards(); track card.id) {
             <div (click)="openDetails(card)"
-                class="relative h-[220px] rounded-3xl p-8 bg-[#0B1120] text-white flex flex-col justify-between overflow-hidden cursor-pointer group hover:scale-[1.02] transition-all duration-500 shadow-2xl shadow-slate-300">
+                class="relative h-[220px] rounded-3xl p-8 bg-[#0B1120] text-white flex flex-col justify-between overflow-hidden cursor-pointer group hover:scale-[1.02] transition-all duration-500 shadow-2xl"
+                [style.boxShadow]="'0 20px 40px -15px ' + (card.color || '#10b981') + '30'">
 
-                <!-- Background Abstract Pattern -->
-                <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent pointer-events-none"></div>
+                <!-- Background Abstract Pattern with Custom Color -->
+                <div class="absolute inset-0 bg-gradient-to-br from-white/5 to-transparent pointer-events-none"></div>
                 <div
-                    class="absolute -right-16 -top-16 w-64 h-64 bg-emerald-500/10 rounded-full blur-3xl group-hover:bg-emerald-500/20 transition-all">
+                    class="absolute -right-16 -top-16 w-64 h-64 rounded-full blur-3xl opacity-20 transition-all group-hover:opacity-40"
+                    [style.backgroundColor]="card.color || '#10b981'">
                 </div>
 
                 <div class="relative z-10 flex justify-between items-start">
