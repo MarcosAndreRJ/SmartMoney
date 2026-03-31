@@ -1,4 +1,4 @@
-import { Component, OnInit, inject, signal, output, input, effect, computed } from '@angular/core';
+import { Component, OnInit, inject, signal, output } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
@@ -86,7 +86,7 @@ import { ToastService } from '../../shared/services/toast.service';
               </div>
             </div>
 
-            <!-- Amount -->
+            <!-- Amount with BRL mask -->
             <div class="space-y-3">
               <label for="amount" class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Valor</label>
               <div class="relative group">
@@ -95,14 +95,15 @@ import { ToastService } from '../../shared/services/toast.service';
                 </div>
                 <input 
                   id="amount"
-                  type="number" 
-                  formControlName="amount"
+                  type="text" 
+                  [value]="formattedAmount()"
+                  (input)="onAmountInput($event)"
                   placeholder="0,00"
                   class="w-full pl-16 pr-6 py-5 bg-slate-50 border-2 border-transparent rounded-[24px] focus:bg-white focus:border-[#0F172A]/10 focus:outline-none transition-all text-slate-800 text-3xl font-black placeholder:text-slate-200">
               </div>
             </div>
 
-            <!-- Category & Date Grid -->
+            <!-- Category & Subcategory Grid -->
             <div class="grid grid-cols-2 gap-5">
               <div class="space-y-3">
                 <label for="category" class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Categoria</label>
@@ -110,10 +111,11 @@ import { ToastService } from '../../shared/services/toast.service';
                   <select 
                     id="category"
                     formControlName="category"
+                    (change)="onCategoryChange()"
                     class="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[20px] focus:bg-white focus:border-[#0F172A]/10 focus:outline-none transition-all text-slate-700 font-bold appearance-none cursor-pointer">
                     <option value="">Selecione...</option>
-                    @for (cat of categories(); track cat.id) {
-                      <option [value]="cat.name">{{ cat.name }}</option>
+                    @for (cat of mainCategories(); track cat.id) {
+                      <option [value]="cat.id">{{ cat.name }}</option>
                     }
                   </select>
                   <mat-icon class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform group-hover:translate-y-[-40%]">expand_more</mat-icon>
@@ -121,15 +123,38 @@ import { ToastService } from '../../shared/services/toast.service';
               </div>
 
               <div class="space-y-3">
-                <label for="date" class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</label>
-                <div class="relative">
-                  <input 
-                    id="date"
-                    type="date" 
-                    formControlName="date"
-                    class="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[20px] focus:bg-white focus:border-[#0F172A]/10 focus:outline-none transition-all text-slate-700 font-bold [&::-webkit-calendar-picker-indicator]:opacity-0">
-                  <mat-icon class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">calendar_today</mat-icon>
+                <label for="subcategory" class="text-[10px] font-black text-slate-400 uppercase tracking-widest">
+                  Subcategoria @if (hasSubcategories()) { <span class="text-red-400">*</span> }
+                </label>
+                <div class="relative group">
+                  <select 
+                    id="subcategory"
+                    formControlName="subcategory"
+                    [disabled]="!hasSubcategories()"
+                    class="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[20px] focus:bg-white focus:border-[#0F172A]/10 focus:outline-none transition-all text-slate-700 font-bold appearance-none cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed">
+                    <option value="">Selecione...</option>
+                    @for (sub of subcategories(); track sub.id) {
+                      <option [value]="sub.name">{{ sub.name }}</option>
+                    }
+                  </select>
+                  <mat-icon class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none transition-transform group-hover:translate-y-[-40%]">expand_more</mat-icon>
                 </div>
+                @if (hasSubcategories() && !txForm.get('subcategory')?.value) {
+                  <p class="text-[10px] text-red-400 font-bold">Subcategoria obrigatória</p>
+                }
+              </div>
+            </div>
+
+            <!-- Date -->
+            <div class="space-y-3">
+              <label for="date" class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</label>
+              <div class="relative">
+                <input 
+                  id="date"
+                  type="date" 
+                  formControlName="date"
+                  class="w-full px-5 py-4 bg-slate-50 border-2 border-transparent rounded-[20px] focus:bg-white focus:border-[#0F172A]/10 focus:outline-none transition-all text-slate-700 font-bold [&::-webkit-calendar-picker-indicator]:opacity-0">
+                <mat-icon class="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">calendar_today</mat-icon>
               </div>
             </div>
 
@@ -218,15 +243,20 @@ export class TransactionFormComponent implements OnInit {
   errorMessage = signal<string | null>(null);
   
   accounts = signal<SupabaseAccount[]>([]);
-  categories = signal<any[]>([]);
+  allCategories = signal<any[]>([]);
+  mainCategories = signal<any[]>([]);
+  subcategories = signal<any[]>([]);
+  hasSubcategories = signal(false);
   
   selectedType = signal<'income' | 'expense'>('expense');
   isConfirmed = signal(true);
+  formattedAmount = signal('0,00');
+  rawAmount = signal<number | null>(null);
 
   txForm = this.fb.group({
     description: ['', [Validators.required, Validators.minLength(3)]],
-    amount: [null as number | null, [Validators.required, Validators.min(0.01)]],
     category: ['', [Validators.required]],
+    subcategory: [''],
     date: [new Date().toISOString().split('T')[0], [Validators.required]],
     account_id: ['', [Validators.required]],
   });
@@ -238,28 +268,64 @@ export class TransactionFormComponent implements OnInit {
   private async loadFormData() {
     const [accs, cats] = await Promise.all([
       this.supabase.getAccounts(),
-      this.supabase.getCategories() // Fetches appropriate categories
+      this.supabase.getAllCategories()
     ]);
 
     if (accs.data) this.accounts.set(accs.data);
-    if (cats.data) this.categories.set(cats.data);
+    if (cats.data) {
+      this.allCategories.set(cats.data);
+      this.filterCategoriesByType(this.selectedType());
+    }
     
-    // Default to main account if exists
     const mainAcc = accs.data?.find(a => a.is_main_account);
     if (mainAcc) {
       this.txForm.patchValue({ account_id: mainAcc.id });
     }
   }
 
-  setType(type: 'income' | 'expense') {
-    this.selectedType.set(type);
-    // Refresh categories based on type
-    this.refreshCategories(type);
+  private filterCategoriesByType(type: 'income' | 'expense') {
+    const filtered = this.allCategories().filter(c => c.type === type && c.parent_id === null);
+    this.mainCategories.set(filtered);
+    this.subcategories.set([]);
+    this.hasSubcategories.set(false);
+    this.txForm.patchValue({ category: '', subcategory: '' });
   }
 
-  private async refreshCategories(type: 'income' | 'expense') {
-    const { data } = await this.supabase.getCategories(type);
-    if (data) this.categories.set(data);
+  setType(type: 'income' | 'expense') {
+    this.selectedType.set(type);
+    this.filterCategoriesByType(type);
+  }
+
+  onCategoryChange() {
+    const catId = this.txForm.get('category')?.value;
+    if (!catId) {
+      this.subcategories.set([]);
+      this.hasSubcategories.set(false);
+      this.txForm.patchValue({ subcategory: '' });
+      return;
+    }
+
+    const subs = this.allCategories().filter(c => c.parent_id === catId);
+    this.subcategories.set(subs);
+    this.hasSubcategories.set(subs.length > 0);
+
+    if (subs.length > 0) {
+      this.txForm.patchValue({ subcategory: '' });
+    } else {
+      this.txForm.patchValue({ subcategory: '' });
+    }
+  }
+
+  onAmountInput(event: Event) {
+    const input = event.target as HTMLInputElement;
+    let raw = input.value.replace(/\D/g, '');
+    const cents = parseInt(raw || '0', 10);
+    this.rawAmount.set(cents / 100);
+    this.formattedAmount.set(this.formatBRL(cents / 100));
+  }
+
+  private formatBRL(value: number): string {
+    return value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
   }
 
   toggleStatus() {
@@ -267,7 +333,21 @@ export class TransactionFormComponent implements OnInit {
   }
 
   async onSubmit() {
-    if (this.txForm.invalid) return;
+    if (this.txForm.invalid) {
+      this.errorMessage.set('Preencha todos os campos obrigatórios.');
+      return;
+    }
+
+    const amount = this.rawAmount();
+    if (!amount || amount <= 0) {
+      this.errorMessage.set('Informe um valor válido.');
+      return;
+    }
+
+    if (this.hasSubcategories() && !this.txForm.get('subcategory')?.value) {
+      this.errorMessage.set('Selecione uma subcategoria.');
+      return;
+    }
 
     this.isLoading.set(true);
     this.errorMessage.set(null);
@@ -279,11 +359,13 @@ export class TransactionFormComponent implements OnInit {
       const isCard = selectedAcc?.account_type === 'credit_card';
 
       const txStatus = this.isConfirmed() ? 'confirmed' : 'pending';
+      const categoryValue = formValue.subcategory || formValue.category!;
+
       const txData = {
         description: formValue.description!,
-        amount: formValue.amount!,
+        amount: amount,
         date: formValue.date!,
-        category: formValue.category!,
+        category: categoryValue,
         status: txStatus as 'confirmed' | 'pending' | 'cancelled'
       };
 
@@ -305,7 +387,6 @@ export class TransactionFormComponent implements OnInit {
         const { error } = await this.supabase.createTransaction(tx);
         if (error) throw error;
 
-        // 3. Update account balance if confirmed
         if (txStatus === 'confirmed') {
           const delta = this.selectedType() === 'income' ? txData.amount : -txData.amount;
           await this.updateAccountBalance(accountId, delta);

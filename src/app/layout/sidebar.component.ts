@@ -4,6 +4,8 @@ import { MatIconModule } from '@angular/material/icon';
 import { NavigationService } from '../core/services/navigation.service';
 import { AdminService } from '../core/services/admin.service';
 import { SupabaseService } from '../core/services/supabase.service';
+import { TransactionViewService } from '../core/services/transaction-view.service';
+import { Router } from '@angular/router';
 
 interface NavItem {
   id: string;
@@ -61,10 +63,10 @@ interface NavItem {
         }
       </nav>
 
-      <!-- Add Transaction Button -->
-      <!-- Only show button if dashboard or transaction view -->
       <div class="px-4 py-6 text-center">
-        <button class="w-full py-3.5 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-purple-200 flex items-center justify-center gap-2 bg-gradient-to-r from-[#6C2BD9] via-[#9333EA] to-[#A21CAF] hover:brightness-105">
+        <button 
+          (click)="txViewSrv.open()"
+          class="w-full py-3.5 text-white rounded-xl font-bold text-sm transition-all shadow-lg shadow-purple-200 flex items-center justify-center gap-2 bg-gradient-to-r from-[#6C2BD9] via-[#9333EA] to-[#A21CAF] hover:brightness-105">
           <mat-icon class="text-lg">add_circle</mat-icon>
           Adicionar Transação
         </button>
@@ -76,6 +78,8 @@ export class SidebarComponent implements OnInit {
   private navSrv = inject(NavigationService);
   private adminService = inject(AdminService);
   private supabaseSrv = inject(SupabaseService);
+  public txViewSrv = inject(TransactionViewService);
+  private router = inject(Router);
 
   currentView = this.navSrv.currentView;
   isAdmin = signal(false);

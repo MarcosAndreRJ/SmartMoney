@@ -344,6 +344,25 @@ export class SupabaseService {
     return { data: result, error: null };
   }
 
+  async getAllCategories(type?: 'income' | 'expense') {
+    const user = await this.getUser();
+    if (!user) return { data: [], error: new Error('User not authenticated') };
+
+    let query = this.supabase
+      .from('categories')
+      .select('*')
+      .eq('user_id', user.id);
+
+    if (type) {
+      query = query.eq('type', type);
+    }
+
+    const { data, error } = await query.order('name', { ascending: true });
+
+    if (error) return { data: [], error };
+    return { data: data || [], error: null };
+  }
+
   async createCategory(categoryData: any) {
     const user = await this.getUser();
     if (!user) return { data: null, error: new Error('User not authenticated') };

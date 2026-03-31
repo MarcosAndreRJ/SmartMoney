@@ -20,6 +20,7 @@ import { LoansPageComponent } from './features/loans/loans-page.component';
 import { AuthComponent } from './features/auth/auth.component';
 import { CreditCardsPageComponent } from './features/credit-cards/credit-cards-page.component';
 import { SupabaseService } from './core/services/supabase.service';
+import { Session } from '@supabase/supabase-js';
 import { ToastComponent } from './shared/components/toast.component';
 import { LoadingOverlayComponent } from './shared/components/loading-overlay.component';
 import { LoadingService } from './core/services/loading.service';
@@ -43,21 +44,19 @@ import { AdminPlansComponent } from './features/admin/admin-plans/admin-plans.co
 import { AdminSubscriptionsComponent } from './features/admin/admin-subscriptions/admin-subscriptions.component';
 import { AdminTransactionsComponent } from './features/admin/admin-transactions/admin-transactions.component';
 import { AdminNotificationsComponent } from './features/admin/admin-notifications/admin-notifications.component';
+import { TransactionFormComponent } from './features/transactions/transaction-form.component';
+import { TransactionViewService } from './core/services/transaction-view.service';
+import { PageContextService } from './core/services/page-context.service';
+import { Router, RouterOutlet } from '@angular/router';
 
 @Component({
   changeDetection: ChangeDetectionStrategy.OnPush,
   selector: 'app-root',
   imports: [
-    SidebarComponent, HeaderComponent, DashboardComponent,
-    AccountFormComponent, AccountsListComponent, AccountStatementComponent,
-    CategoriesPageComponent, SubcategoriesPageComponent, SubcategoryFormComponent,
-    AllTransfersComponent, TransfersComponent, ProfileComponent, GoalsComponent,
-    ContactsComponent, NotificationsComponent, SharedAccountsComponent,
-    RecurringTransactionsComponent, InvestmentsComponent, TransactionsPageComponent, LoansPageComponent, AuthComponent,
-    ToastComponent, LoadingOverlayComponent, GoalContributionsPageComponent, DataManagementComponent,
-    CreditCardsPageComponent, SubscriptionPageComponent, SubscriptionCheckoutComponent, SubscriptionStatusComponent,
-    AdminDashboardComponent, AdminUsersComponent, AdminPlansComponent,
-    AdminSubscriptionsComponent, AdminTransactionsComponent, AdminNotificationsComponent
+    SidebarComponent, HeaderComponent,
+    AccountFormComponent, AuthComponent,
+    ToastComponent, LoadingOverlayComponent,
+    TransactionFormComponent, RouterOutlet
   ],
   template: `
     <app-toast></app-toast>
@@ -72,104 +71,26 @@ import { AdminNotificationsComponent } from './features/admin/admin-notification
           (accountCreated)="onAccountCreated()">
         </app-account-form>
       }
+
+      @if (txViewSrv.isOpen()) {
+        <app-transaction-form
+          (formClose)="txViewSrv.close()"
+          (formSave)="onTransactionSaved()">
+        </app-transaction-form>
+      }
       
       <div class="flex min-h-screen bg-[#F8F9FA]" [class.hidden]="showAccountForm()">
         <app-sidebar></app-sidebar>
         <div class="flex-1 ml-64 flex flex-col">
           <app-header (viewChange)="handleViewChange($event)"></app-header>
           <main class="flex-1 overflow-y-auto">
-            @if (currentView() === 'dashboard') {
-              <app-dashboard></app-dashboard>
-            } @else if (currentView() === 'accounts') {
-              <app-accounts-list 
-                #accountsList
-                (addAccount)="showAccountForm.set(true)"
-                (viewStatement)="openStatement($event)">
-              </app-accounts-list>
-            } @else if (currentView() === 'statement') {
-              <app-account-statement 
-                [account]="selectedAccountForStatement()!"
-                (back)="handleViewChange('accounts')">
-              </app-account-statement>
-            } @else if (currentView() === 'categories') {
-              <app-categories-page (changeView)="handleExtViewChange($event)"></app-categories-page>
-            } @else if (currentView() === 'subcategories') {
-              <app-subcategories-page [initialParentId]="selectedCategoryId()"></app-subcategories-page>
-            } @else if (currentView() === 'subcategory-form') {
-              <app-subcategory-form></app-subcategory-form>
-            } @else if (currentView() === 'profile') {
-              <app-profile></app-profile>
-            } @else if (currentView() === 'goals') {
-              <app-goals></app-goals>
-            } @else if (currentView() === 'goal-contributions') {
-              <app-goal-contributions-page></app-goal-contributions-page>
-            } @else if (currentView() === 'contacts') {
-              <app-contacts></app-contacts>
-            } @else if (currentView() === 'notifications') {
-              <app-notifications></app-notifications>
-            } @else if (currentView() === 'shared-accounts') {
-              <app-shared-accounts></app-shared-accounts>
-            } @else if (currentView() === 'recurring') {
-              <app-recurring-transactions></app-recurring-transactions>
-            } @else if (currentView() === 'budgets') {
-              <div class="p-8 flex items-center justify-center h-full text-gray-400">
-                Budgets view is coming soon...
-              </div>
-            } @else if (currentView() === 'savings') {
-              <div class="p-8 flex items-center justify-center h-full text-gray-400">
-                Savings view is coming soon...
-              </div>
-            } @else if (currentView() === 'investments') {
-              <app-investments></app-investments>
-            } @else if (currentView() === 'loans') {
-              <app-loans-page></app-loans-page>
-            } @else if (currentView() === 'credit-cards') {
-              <app-credit-cards-page></app-credit-cards-page>
-            } @else if (currentView() === 'data-management') {
-              <app-data-management></app-data-management>
-            } @else if (currentView() === 'subscription') {
-              <app-subscription-page></app-subscription-page>
-            } @else if (currentView() === 'subscription-checkout') {
-              <app-subscription-checkout></app-subscription-checkout>
-            } @else if (currentView() === 'subscription-status') {
-              <app-subscription-status></app-subscription-status>
-            } @else if (currentView() === 'settings') {
-              <div class="p-8 flex items-center justify-center h-full text-gray-400">
-                Settings view is coming soon...
-              </div>
-            } @else if (currentView() === 'transactions') {
-              <app-transfers 
-                (seeAll)="handleViewChange('all-transfers')"
-                (changeView)="handleViewChange($event)">
-              </app-transfers>
-            } @else if (currentView() === 'lancamentos') {
-              <app-transactions-page></app-transactions-page>
-            } @else if (currentView() === 'all-transfers') {
-              <app-all-transfers (back)="handleViewChange('transactions')"></app-all-transfers>
-            } @else if (currentView() === 'admin-dashboard') {
-              <app-admin-dashboard></app-admin-dashboard>
-            } @else if (currentView() === 'admin-users') {
-              <app-admin-users></app-admin-users>
-            } @else if (currentView() === 'admin-plans') {
-              <app-admin-plans></app-admin-plans>
-            } @else if (currentView() === 'admin-subscriptions') {
-              <app-admin-subscriptions></app-admin-subscriptions>
-            } @else if (currentView() === 'admin-transactions') {
-              <app-admin-transactions></app-admin-transactions>
-            } @else if (currentView() === 'admin-notifications') {
-              <app-admin-notifications></app-admin-notifications>
-            } @else if (currentView() === 'admin') {
-              <app-admin-dashboard></app-admin-dashboard>
-            } @else {
-              <div class="p-8 flex items-center justify-center h-full text-gray-400">
-                Em desenvolvimento...
-              </div>
-            }
+            <router-outlet></router-outlet>
           </main>
         </div>
       </div>
     }
   `,
+
   styles: []
 })
 export class App implements OnInit {
@@ -178,6 +99,9 @@ export class App implements OnInit {
   private navSrv = inject(NavigationService);
   private recurringScheduler = inject(RecurringSchedulerService);
   private adminService = inject(AdminService);
+  public txViewSrv = inject(TransactionViewService);
+  private pageContextSrv = inject(PageContextService);
+  private router = inject(Router);
 
   @ViewChild('accountsList') accountsList?: AccountsListComponent;
 
@@ -185,7 +109,7 @@ export class App implements OnInit {
   currentView = this.navSrv.currentView;
   selectedAccountForStatement = this.navSrv.selectedAccountForStatement;
   selectedCategoryId = this.navSrv.selectedCategoryId;
-  session = signal<unknown>(null);
+  session = signal<Session | null>(null);
   isAdmin = signal(false);
 
   async ngOnInit() {
@@ -207,12 +131,12 @@ export class App implements OnInit {
   }
 
   handleViewChange(view: any) {
-    this.loadingSrv.show();
-    this.navSrv.navigateTo(view as any);
+    this.router.navigate([view]);
+  }
 
-    setTimeout(() => {
-      this.loadingSrv.hide();
-    }, 400);
+  onNavigate(viewId: any, event: Event) {
+    event.preventDefault();
+    this.router.navigate([viewId]);
   }
 
   handleExtViewChange(event: { view: any, parentId?: string }) {
@@ -229,5 +153,9 @@ export class App implements OnInit {
     if (this.currentView() === 'accounts' && this.accountsList) {
       this.accountsList.loadAccounts();
     }
+  }
+
+  onTransactionSaved() {
+    this.txViewSrv.close();
   }
 }

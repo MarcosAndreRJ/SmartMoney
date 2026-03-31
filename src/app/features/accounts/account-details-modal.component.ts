@@ -80,7 +80,7 @@ export interface Account {
           </div>
           
           <!-- Transactions list -->
-          <div class="space-y-1 min-h-[120px]">
+          <div class="space-y-1 max-h-[280px] overflow-y-auto custom-scrollbar" role="list">
             @if (isLoadingTx()) {
               <div class="flex items-center justify-center h-20 text-slate-400">
                 <mat-icon class="animate-spin mr-2">refresh</mat-icon>
@@ -93,7 +93,7 @@ export interface Account {
               </div>
             } @else {
               @for (tx of recentTransactions(); track tx.id) {
-                <div class="flex items-center justify-between py-3 border-b border-slate-50 last:border-0">
+                <div class="flex items-center justify-between py-3 border-b border-slate-50 last:border-0" role="listitem">
                   <div class="flex items-center gap-3">
                     <div class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500" [ngClass]="getTxIcon(tx).bg">
                       <mat-icon class="text-[16px]" [ngClass]="getTxIcon(tx).color">{{ getTxIcon(tx).icon }}</mat-icon>
@@ -125,7 +125,12 @@ export interface Account {
 
       </div>
     </div>
-  `
+  `,
+  styles: [`
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
+  `]
 })
 export class AccountDetailsModalComponent implements OnInit {
   private supabase = inject(SupabaseService);
@@ -147,9 +152,24 @@ export class AccountDetailsModalComponent implements OnInit {
     this.isLoadingTx.set(true);
     try {
       const accountId = String(this.account().id);
-      const { data, error } = await this.supabase.getTransactions(accountId);
+      const user = await this.supabase.getUser();
+      if (!user) return;
+
+      const today = new Date();
+      const todayStr = today.toISOString().split('T')[0];
+
+      const { data, error } = await this.supabase.client
+        .from('transactions')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('account_id', accountId)
+        .lte('date', todayStr)
+        .in('status', ['confirmed', 'pending'])
+        .order('date', { ascending: false })
+        .limit(7);
+
       if (data && !error) {
-        this.recentTransactions.set((data as SupabaseTransaction[]).slice(0, 3));
+        this.recentTransactions.set(data as SupabaseTransaction[]);
       }
     } finally {
       this.isLoadingTx.set(false);

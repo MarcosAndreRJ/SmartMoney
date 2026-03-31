@@ -13,12 +13,12 @@
             "state": {
               "type": "markdown",
               "state": {
-                "file": "SmartMoney.md",
+                "file": "Recursos_Checklist.md",
                 "mode": "source",
                 "source": false
               },
               "icon": "lucide-file",
-              "title": "SmartMoney"
+              "title": "Recursos_Checklist"
             }
           }
         ]
@@ -94,7 +94,7 @@
             "state": {
               "type": "backlink",
               "state": {
-                "file": "SmartMoney.md",
+                "file": "Recursos_Checklist.md",
                 "collapseAll": false,
                 "extraContext": false,
                 "sortOrder": "alphabetical",
@@ -104,7 +104,7 @@
                 "unlinkedCollapsed": true
               },
               "icon": "links-coming-in",
-              "title": "Links inversos para SmartMoney"
+              "title": "Links inversos para Recursos_Checklist"
             }
           },
           {
@@ -113,12 +113,12 @@
             "state": {
               "type": "outgoing-link",
               "state": {
-                "file": "SmartMoney.md",
+                "file": "Recursos_Checklist.md",
                 "linksCollapsed": false,
                 "unlinkedCollapsed": true
               },
               "icon": "links-going-out",
-              "title": "Links de saída para SmartMoney"
+              "title": "Links de saída para Recursos_Checklist"
             }
           },
           {
@@ -156,13 +156,13 @@
             "state": {
               "type": "outline",
               "state": {
-                "file": "SmartMoney.md",
+                "file": "Recursos_Checklist.md",
                 "followCursor": false,
                 "showSearch": false,
                 "searchQuery": ""
               },
               "icon": "lucide-list",
-              "title": "Sumário de SmartMoney"
+              "title": "Sumário de Recursos_Checklist"
             }
           }
         ]
@@ -184,5 +184,8 @@
     }
   },
   "active": "0c722ead88c7b57f",
-  "lastOpenFiles": []
+  "lastOpenFiles": [
+    "SmartMoney.md",
+    "Recursos_Checklist.md"
+  ]
 }

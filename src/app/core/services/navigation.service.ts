@@ -1,4 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject } from '@angular/core';
+import { Router, NavigationEnd } from '@angular/router';
+import { filter } from 'rxjs/operators';
 
 export type AppView = 'dashboard' | 'accounts' | 'statement' | 'categories' | 'subcategories' | 'subcategory-form' |
     'profile' | 'goals' | 'goal-contributions' | 'contacts' | 'notifications' | 'shared-accounts' |
@@ -19,12 +21,29 @@ export interface SubscriptionStatusContext {
     providedIn: 'root'
 })
 export class NavigationService {
+    private router = inject(Router);
     currentView = signal<AppView>('dashboard');
     selectedCategoryId = signal<string | null>(null);
     selectedSubcategoryId = signal<string | null>(null);
     selectedAccountForStatement = signal<any>(null);
     selectedPlanId = signal<string | null>(null);
     subscriptionStatusContext = signal<SubscriptionStatusContext | null>(null);
+
+    constructor() {
+        // Sync currentView signal with router URL
+        this.router.events.pipe(
+            filter(event => event instanceof NavigationEnd)
+        ).subscribe(event => {
+            const url = (event as NavigationEnd).urlAfterRedirects;
+            // Get the last segment as the view name, or fallback to dashboard
+            const segments = url.split('/').filter(s => !!s);
+            const view = (segments.length > 0 ? segments[segments.length - 1] : 'dashboard') as AppView;
+            
+            if (view) {
+                this.currentView.set(view);
+            }
+        });
+    }
 
     navigateTo(view: AppView, params?: { categoryId?: string, subcategoryId?: string, account?: any }) {
         console.log(`NavigationService: Navigating to ${view}`, params);
@@ -45,6 +64,7 @@ export class NavigationService {
             this.selectedAccountForStatement.set(params.account);
         }
 
-        this.currentView.set(view);
+        // Use standard Angular Router
+        this.router.navigate([view]);
     }
 }
