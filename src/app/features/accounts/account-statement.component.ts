@@ -1,9 +1,10 @@
 import { Component, input, output, inject, OnInit, signal, computed } from '@angular/core';
-import { CommonModule } from '@angular/common';
+import { CommonModule, DecimalPipe } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
-import { Account } from './account-details-modal.component';
+import { Account } from '../../core/models/account.model';
 import { SupabaseService, SupabaseTransaction } from '../../core/services/supabase.service';
+import { NavigationService } from '../../core/services/navigation.service';
 
 interface TransactionGroup {
   label: string;
@@ -15,7 +16,7 @@ interface TransactionGroup {
 @Component({
   selector: 'app-account-statement',
   standalone: true,
-  imports: [CommonModule, MatIconModule, FormsModule],
+  imports: [CommonModule, MatIconModule, FormsModule, DecimalPipe],
   template: `
     <div class="p-8 max-w-7xl mx-auto space-y-8 pb-20 animate-in fade-in duration-300">
       
@@ -23,25 +24,27 @@ interface TransactionGroup {
       <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div class="flex items-center gap-4">
           <!-- Back button -->
-          <button (click)="back.emit()" class="w-10 h-10 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors">
+          <button (click)="navSrv.navigateTo('accounts')" class="w-10 h-10 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-600 flex items-center justify-center transition-colors">
             <mat-icon>arrow_back</mat-icon>
           </button>
 
           <!-- Bank Icon (initial-based, colored) -->
           <div 
             class="w-12 h-12 rounded-xl flex items-center justify-center text-white shadow-lg text-xl font-black shrink-0"
-            [style.backgroundColor]="getBrandColor(account().name)">
-            {{ account().name.charAt(0).toUpperCase() }}
+            [style.backgroundColor]="getBrandColor(account()?.name || '')">
+            {{ account()?.name?.charAt(0)?.toUpperCase() }}
           </div>
 
           <!-- Bank Info -->
-          <div>
-            <div class="flex items-center gap-1.5">
-              <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">{{ account().name }}</h1>
-              <mat-icon class="text-slate-400 text-[18px]">expand_more</mat-icon>
+          @if (account()) {
+            <div>
+              <div class="flex items-center gap-1.5">
+                <h1 class="text-xl font-extrabold text-slate-900 tracking-tight">{{ account()?.name }}</h1>
+                <mat-icon class="text-slate-400 text-[18px]">expand_more</mat-icon>
+              </div>
+              <p class="text-sm font-medium text-slate-500 mt-0.5">Saldo Atual: <span class="text-emerald-600 font-bold">{{ account()?.balance }}</span></p>
             </div>
-            <p class="text-sm font-medium text-slate-500 mt-0.5">Saldo Atual: <span class="text-emerald-600 font-bold">{{ account().balance }}</span></p>
-          </div>
+          }
         </div>
 
         <!-- Header Actions -->
@@ -227,10 +230,11 @@ interface TransactionGroup {
   `
 })
 export class AccountStatementComponent implements OnInit {
+  public navSrv = inject(NavigationService);
   private supabase = inject(SupabaseService);
 
-  account = input.required<Account>();
-  back = output<void>();
+  accountInput = input<Account | null>(null, { alias: 'account' });
+  account = computed(() => this.accountInput() || this.navSrv.selectedAccountForStatement());
 
   isLoading = signal(true);
   allTransactions = signal<SupabaseTransaction[]>([]);
@@ -302,13 +306,20 @@ export class AccountStatementComponent implements OnInit {
   });
 
   async ngOnInit() {
+    if (!this.account()) {
+      this.navSrv.navigateTo('accounts');
+      return;
+    }
     await this.loadTransactions();
   }
 
   private async loadTransactions() {
+    const acc = this.account();
+    if (!acc) return;
+    
     this.isLoading.set(true);
     try {
-      const accountId = String(this.account().id);
+      const accountId = String(acc.id);
       const { data, error } = await this.supabase.getTransactions(accountId);
       if (data && !error) {
         this.allTransactions.set(data as SupabaseTransaction[]);
@@ -348,7 +359,7 @@ export class AccountStatementComponent implements OnInit {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `extrato_${this.account().name.replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
+    link.download = `extrato_${(this.account()?.name || 'conta').replace(/\s+/g, '_')}_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   }

@@ -25,6 +25,7 @@ interface PlanForm {
     investments: boolean;
     whatsapp_entries: boolean;
     shared_accounts: boolean;
+    bulk_import: boolean;
   };
   is_active: boolean;
 }
@@ -44,7 +45,8 @@ const PLAN_PRESETS: Record<PlanSlug, Omit<PlanForm, 'price' | 'is_active'>> = {
       loans: false,
       investments: false,
       whatsapp_entries: false,
-      shared_accounts: false
+      shared_accounts: false,
+      bulk_import: false
     }
   },
   pro: {
@@ -61,7 +63,8 @@ const PLAN_PRESETS: Record<PlanSlug, Omit<PlanForm, 'price' | 'is_active'>> = {
       loans: false,
       investments: false,
       whatsapp_entries: false,
-      shared_accounts: false
+      shared_accounts: false,
+      bulk_import: false
     }
   },
   master: {
@@ -78,7 +81,8 @@ const PLAN_PRESETS: Record<PlanSlug, Omit<PlanForm, 'price' | 'is_active'>> = {
       loans: true,
       investments: true,
       whatsapp_entries: true,
-      shared_accounts: false
+      shared_accounts: false,
+      bulk_import: true
     }
   },
   ultra: {
@@ -95,7 +99,8 @@ const PLAN_PRESETS: Record<PlanSlug, Omit<PlanForm, 'price' | 'is_active'>> = {
       loans: true,
       investments: true,
       whatsapp_entries: true,
-      shared_accounts: false
+      shared_accounts: false,
+      bulk_import: true
     }
   },
   family: {
@@ -112,7 +117,8 @@ const PLAN_PRESETS: Record<PlanSlug, Omit<PlanForm, 'price' | 'is_active'>> = {
       loans: true,
       investments: true,
       whatsapp_entries: true,
-      shared_accounts: true
+      shared_accounts: true,
+      bulk_import: true
     }
   }
 };
@@ -342,7 +348,8 @@ export class AdminPlansComponent implements OnInit {
     { key: 'loans', label: 'Controle de emprestimos' },
     { key: 'investments', label: 'Controle de investimentos' },
     { key: 'whatsapp_entries', label: 'Lancamentos por WhatsApp' },
-    { key: 'shared_accounts', label: 'Contas compartilhadas' }
+    { key: 'shared_accounts', label: 'Contas compartilhadas' },
+    { key: 'bulk_import', label: 'Importação de planilhas' }
   ];
 
   planForm: PlanForm = this.createPlanForm('basic');
@@ -545,6 +552,7 @@ export class AdminPlansComponent implements OnInit {
     if (resources.investments) highlights.push('Controle de investimentos');
     if (resources.shared_accounts) highlights.push('Contas compartilhadas');
     if (resources.whatsapp_entries) highlights.push('Lancamentos por WhatsApp');
+    if (resources.bulk_import) highlights.push('Importação de planilhas');
 
     return highlights;
   }

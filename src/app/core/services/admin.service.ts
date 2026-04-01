@@ -123,7 +123,8 @@ export class AdminService {
       loans: false,
       investments: false,
       whatsapp_entries: false,
-      shared_accounts: false
+      shared_accounts: false,
+      bulk_import: false
     };
 
     return (data || []).map(p => ({

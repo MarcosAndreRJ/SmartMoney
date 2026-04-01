@@ -5,7 +5,7 @@ import { DashboardComponent } from './features/dashboard/dashboard.component';
 import { AccountFormComponent } from './features/accounts/account-form.component';
 import { AccountsListComponent } from './features/accounts/accounts-list.component';
 import { AccountStatementComponent } from './features/accounts/account-statement.component';
-import { Account } from './features/accounts/account-details-modal.component';
+import { Account } from './core/models/account.model';
 import { AllTransfersComponent } from './features/transactions/all-transfers.component';
 import { TransfersComponent } from './features/transactions/transfers.component';
 import { ProfileComponent } from './features/profile/profile.component';

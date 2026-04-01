@@ -104,6 +104,7 @@ export class SidebarComponent implements OnInit {
     { id: 'loans', icon: 'account_balance', label: 'Empréstimos', resource: 'loans' },
     { id: 'notifications', icon: 'notifications', label: 'Notificações' },
     { id: 'contacts', icon: 'contacts', label: 'Contatos' },
+    { id: 'importacao', icon: 'upload_file', label: 'Importar Arquivos', resource: 'bulk_import' },
     { id: 'subscription', icon: 'workspace_premium', label: 'Assinatura' },
     { id: 'settings', icon: 'settings', label: 'Configurações' },
   ];

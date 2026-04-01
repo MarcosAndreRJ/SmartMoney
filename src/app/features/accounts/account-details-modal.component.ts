@@ -2,20 +2,7 @@ import { Component, input, output, inject, OnInit, signal } from '@angular/core'
 import { MatIconModule } from '@angular/material/icon';
 import { CommonModule } from '@angular/common';
 import { SupabaseService, SupabaseTransaction } from '../../core/services/supabase.service';
-
-export interface Account {
-  id: string | number;
-  name: string;
-  type: string;
-  balance: string;
-  balanceLabel: string;
-  details: string;
-  icon: string;
-  iconBgClass: string;
-  iconColorClass: string;
-  badgeClass: string;
-  color?: string;
-}
+import { Account } from '../../core/models/account.model';
 
 @Component({
   selector: 'app-account-details-modal',

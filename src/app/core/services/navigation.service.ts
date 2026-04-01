@@ -1,6 +1,7 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { Router, NavigationEnd } from '@angular/router';
 import { filter } from 'rxjs/operators';
+import { Account } from '../models/account.model';
 
 export type AppView = 'dashboard' | 'accounts' | 'statement' | 'categories' | 'subcategories' | 'subcategory-form' |
     'profile' | 'goals' | 'goal-contributions' | 'contacts' | 'notifications' | 'shared-accounts' |
@@ -25,7 +26,7 @@ export class NavigationService {
     currentView = signal<AppView>('dashboard');
     selectedCategoryId = signal<string | null>(null);
     selectedSubcategoryId = signal<string | null>(null);
-    selectedAccountForStatement = signal<any>(null);
+    selectedAccountForStatement = signal<Account | null>(null);
     selectedPlanId = signal<string | null>(null);
     subscriptionStatusContext = signal<SubscriptionStatusContext | null>(null);
 
@@ -45,7 +46,7 @@ export class NavigationService {
         });
     }
 
-    navigateTo(view: AppView, params?: { categoryId?: string, subcategoryId?: string, account?: any }) {
+    navigateTo(view: AppView, params?: { categoryId?: string, subcategoryId?: string, account?: Account }) {
         console.log(`NavigationService: Navigating to ${view}`, params);
 
         if (params?.categoryId) {

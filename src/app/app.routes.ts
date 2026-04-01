@@ -21,8 +21,11 @@ import { LoansPageComponent } from './features/loans/loans-page.component';
 import { CreditCardsPageComponent } from './features/credit-cards/credit-cards-page.component';
 import { DataManagementComponent } from './features/data-management/data-management.component';
 import { SubscriptionPageComponent } from './features/subscription/subscription-page.component';
+import { SubscriptionCheckoutComponent } from './features/subscription/subscription-checkout.component';
+import { SubscriptionStatusComponent } from './features/subscription/subscription-status.component';
 import { TransfersComponent } from './features/transactions/transfers.component';
 import { AllTransfersComponent } from './features/transactions/all-transfers.component';
+import { ImportacaoPageComponent } from './features/import/importacao-page.component';
 
 // Admin components
 import { AdminDashboardComponent } from './features/admin/admin-dashboard/admin-dashboard.component';
@@ -138,6 +141,21 @@ export const routes: Routes = [
     path: 'lancamentos',
     component: TransactionsPageComponent,
     data: { title: 'Lançamentos Mensais', pageId: PageId.LANCAMENTOS }
+  },
+  {
+    path: 'importacao',
+    component: ImportacaoPageComponent,
+    data: { title: 'Importar Planilha', pageId: PageId.IMPORTACAO }
+  },
+  {
+    path: 'subscription-checkout',
+    component: SubscriptionCheckoutComponent,
+    data: { title: 'Finalizar Assinatura', pageId: PageId.SUBSCRIPTION_CHECKOUT }
+  },
+  {
+    path: 'subscription-status',
+    component: SubscriptionStatusComponent,
+    data: { title: 'Status da Assinatura', pageId: PageId.SUBSCRIPTION_STATUS }
   },
 
   // Admin routes

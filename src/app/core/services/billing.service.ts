@@ -9,24 +9,38 @@ export class BillingService {
   private supabase = inject(SupabaseService);
 
   async getCurrentPlan(): Promise<PlanCode> {
-    const user = await this.supabase.getUser();
-    if (!user) return PlanCode.BASIC;
+    const details = await this.getUserPlan();
+    return details.plan;
+  }
 
-    const { data, error } = await this.supabase.client
+  async getUserPlan(): Promise<{ plan: PlanCode; resources: any; isPremium: boolean }> {
+    const user = await this.supabase.getUser();
+    if (!user) return { plan: PlanCode.BASIC, resources: {}, isPremium: false };
+
+    const { data: userData, error: userError } = await this.supabase.client
       .from('active_user_plan')
-      .select('active_plan,is_premium_active')
+      .select('active_plan, is_premium_active')
       .eq('user_id', user.id)
       .maybeSingle();
 
-    if (error || !data || !data.is_premium_active) {
-      return PlanCode.BASIC;
+    if (userError || !userData || !userData.is_premium_active) {
+      return { plan: PlanCode.BASIC, resources: {}, isPremium: false };
     }
 
-    const activePlan = String(data.active_plan || '').toLowerCase();
-    if (activePlan === PlanCode.PRO) return PlanCode.PRO;
-    if (activePlan === PlanCode.MASTER) return PlanCode.MASTER;
-    if (activePlan === PlanCode.FAMILY) return PlanCode.FAMILY;
-    return PlanCode.BASIC;
+    const activePlan = String(userData.active_plan || '').toLowerCase() as PlanCode;
+
+    // Buscar os resources na tabela plans usando o slug
+    const { data: planData } = await this.supabase.client
+      .from('plans')
+      .select('resources')
+      .eq('slug', activePlan)
+      .maybeSingle();
+
+    return { 
+      plan: activePlan, 
+      resources: planData?.resources || {}, 
+      isPremium: userData.is_premium_active 
+    };
   }
 
   async startCheckout(priceId: string): Promise<string> {

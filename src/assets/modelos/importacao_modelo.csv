@@ -1,0 +1,6 @@
+Data,Descricao,Valor,Categoria,Tipo
+2024-01-15,Salario,5000.00,Salario,receita
+2024-01-10,Supermercado,250.50,Alimentacao,despesa
+2024-01-12,Conta de Luz,120.00,Utilities,despesa
+2024-01-15,Freelance,1500.00,Receita Extra,receita
+2024-01-20,Internet,99.90,Utilities,despesa

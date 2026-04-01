@@ -1,8 +1,10 @@
 import { Component, inject, OnInit, signal, computed, Output, EventEmitter } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
-import { AccountDetailsModalComponent, Account } from './account-details-modal.component';
+import { AccountDetailsModalComponent } from './account-details-modal.component';
+import { Account } from '../../core/models/account.model';
 import { AccountFormComponent } from './account-form.component';
+import { NavigationService } from '../../core/services/navigation.service';
 
 import { DeleteConfirmModalComponent } from '../../shared/components/delete-confirm-modal.component';
 import { SupabaseService, SupabaseAccount } from '../../core/services/supabase.service';
@@ -24,6 +26,7 @@ import { LoadingService } from '../../core/services/loading.service';
 export class AccountsListComponent implements OnInit {
   private supabase = inject(SupabaseService);
   private loadingSrv = inject(LoadingService);
+  private navSrv = inject(NavigationService);
 
   showForm = signal(false);
   isLoading = signal(true);
@@ -139,7 +142,7 @@ export class AccountsListComponent implements OnInit {
 
   onViewStatement(account: Account) {
     this.selectedAccount.set(null);
-    this.viewStatement.emit(account);
+    this.navSrv.navigateTo('statement', { account });
   }
 
   async executeDelete() {

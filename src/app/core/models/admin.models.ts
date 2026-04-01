@@ -26,6 +26,7 @@ export interface Plan {
     investments: boolean;
     whatsapp_entries: boolean;
     shared_accounts: boolean;
+    bulk_import: boolean;
   };
   is_active: boolean;
   created_at: string;
