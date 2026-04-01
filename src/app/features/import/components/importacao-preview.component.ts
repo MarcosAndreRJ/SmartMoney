@@ -1,54 +1,68 @@
 import { Component, EventEmitter, Input, Output, signal, computed, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { MatIconModule } from '@angular/material/icon';
 import { ImportItem, ImportStatus, ImportType } from '../../../core/models/import.interface';
 import { SupabaseAccount } from '../../../core/services/supabase.service';
 
 @Component({
   selector: 'app-importacao-preview',
   standalone: true,
-  imports: [CommonModule, FormsModule],
+  imports: [CommonModule, FormsModule, MatIconModule],
   template: `
     <div class="space-y-6 w-full animate-in fade-in slide-in-from-bottom-4 duration-700">
-      <!-- Header & Destination -->
-      <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl p-6 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm transition-all duration-300">
-        <div class="space-y-1">
-          <h3 class="text-xl font-bold text-slate-900 dark:text-white">Confirme os Lançamentos</h3>
-          <p class="text-sm text-slate-500">Selecione o destino e revise os dados antes de importar.</p>
+      
+      <!-- Header -->
+      <div class="mb-2">
+        <h2 class="text-2xl font-black text-slate-900 mb-2">Prévia da Importação</h2>
+        <p class="text-sm text-slate-500">Revise os dados detectados antes de confirmar a importação.</p>
+      </div>
+
+      <!-- Account Selector (Top of Table) -->
+      <div class="flex items-center gap-4 p-4 bg-white rounded-2xl border border-slate-100 shadow-sm">
+        <div class="flex-1">
+          <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Importar para</label>
+          <div class="flex gap-3">
+            <button 
+              (click)="selectedType = ImportType.TRANSACTION"
+              class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
+              [class.bg-emerald-500]="selectedType === ImportType.TRANSACTION"
+              [class.text-white]="selectedType === ImportType.TRANSACTION"
+              [class.bg-slate-100]="selectedType !== ImportType.TRANSACTION"
+              [class.text-slate-600]="selectedType !== ImportType.TRANSACTION"
+            >
+              Conta Bancária
+            </button>
+            <button 
+              (click)="selectedType = ImportType.CARD"
+              class="px-4 py-2 rounded-xl text-sm font-bold transition-all"
+              [class.bg-emerald-500]="selectedType === ImportType.CARD"
+              [class.text-white]="selectedType === ImportType.CARD"
+              [class.bg-slate-100]="selectedType !== ImportType.CARD"
+              [class.text-slate-600]="selectedType !== ImportType.CARD"
+            >
+              Cartão de Crédito
+            </button>
+          </div>
         </div>
-
-        <div class="flex flex-col sm:flex-row gap-3 min-w-[300px]">
-          <div class="flex-1 space-y-1.5">
-            <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Tipo de Destino</label>
-            <select 
-              [(ngModel)]="selectedType" 
-              (ngModelChange)="onTypeChange()"
-              class="w-full h-11 px-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/50 text-sm font-medium transition-all"
-            >
-              <option [value]="ImportType.TRANSACTION">Conta Bancária</option>
-              <option [value]="ImportType.CARD">Cartão de Crédito</option>
-            </select>
-          </div>
-
-          <div class="flex-1 space-y-1.5">
-            <label class="text-xs font-bold uppercase tracking-wider text-slate-400">Selecionar {{ selectedType === ImportType.TRANSACTION ? 'Conta' : 'Cartão' }}</label>
-            <select 
-              [(ngModel)]="selectedTargetId" 
-              class="w-full h-11 px-4 py-2 bg-slate-100 dark:bg-slate-800 border-none rounded-xl focus:ring-2 focus:ring-emerald-500/50 text-sm font-medium transition-all"
-            >
-              <option *ngFor="let target of filteredTargets" [value]="target.id">
-                {{ target.institution_name }}
-              </option>
-            </select>
-          </div>
+        <div class="flex-1">
+          <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Selecione a {{ selectedType === ImportType.TRANSACTION ? 'conta' : 'cartão' }}</label>
+          <select 
+            [(ngModel)]="selectedTargetId" 
+            class="w-full h-11 px-4 bg-slate-50 border border-slate-200 rounded-xl text-sm font-bold text-slate-700 focus:outline-none focus:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10 transition-all"
+          >
+            @for (target of filteredTargets; track target.id) {
+              <option [value]="target.id">{{ target.institution_name }}</option>
+            }
+          </select>
         </div>
       </div>
 
       <!-- Preview Table -->
-      <div class="bg-white/50 dark:bg-slate-900/50 backdrop-blur-xl rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm overflow-hidden transition-all duration-300">
+      <div class="bg-white rounded-3xl border border-slate-100 shadow-sm overflow-hidden">
         <div class="overflow-x-auto">
           <table class="w-full text-left border-collapse">
-            <thead class="bg-slate-50/50 dark:bg-slate-800/50">
+            <thead class="bg-slate-50">
               <tr>
                 <th class="p-4 w-12">
                   <div class="relative flex items-center">
@@ -56,103 +70,156 @@ import { SupabaseAccount } from '../../../core/services/supabase.service';
                       type="checkbox" 
                       [checked]="isAllSelected" 
                       (change)="toggleAll()"
-                      class="peer h-5 w-5 appearance-none rounded-md border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 checked:bg-emerald-500 checked:border-emerald-500 transition-all duration-200 cursor-pointer"
+                      class="peer h-5 w-5 appearance-none rounded-md border-2 border-slate-300 bg-white checked:bg-emerald-500 checked:border-emerald-500 transition-all duration-200 cursor-pointer"
                     >
-                    <span class="material-symbols-rounded absolute text-white text-xs opacity-0 peer-checked:opacity-100 pointer-events-none left-1">check</span>
+                    <mat-icon class="absolute text-white text-xs opacity-0 peer-checked:opacity-100 pointer-events-none left-1.5 top-1.5">check</mat-icon>
                   </div>
                 </th>
-                <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
-                <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Data</th>
-                <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Descrição</th>
-                <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Categoria</th>
-                <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Valor</th>
+                <th class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                <th class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Data</th>
+                <th class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Descrição</th>
+                <th class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Categoria</th>
+                <th class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider text-right">Valor</th>
                 <th class="p-4 w-10"></th>
               </tr>
             </thead>
-            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
-              <tr 
-                *ngFor="let item of items" 
-                class="group hover:bg-slate-50/80 dark:hover:bg-slate-800/80 transition-colors"
-                [class.opacity-50]="!item.selected"
-              >
-                <td class="p-4">
-                  <div class="relative flex items-center">
-                    <input 
-                      type="checkbox" 
-                      [(ngModel)]="item.selected"
-                      (change)="checkSelection()"
-                      [disabled]="item.status === ImportStatus.INVALID"
-                      class="peer h-5 w-5 appearance-none rounded-md border-2 border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 checked:bg-emerald-500 checked:border-emerald-500 transition-all duration-200 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-                    >
-                    <span class="material-symbols-rounded absolute text-white text-xs opacity-0 peer-checked:opacity-100 pointer-events-none left-1">check</span>
-                  </div>
-                </td>
-                <td class="p-4">
-                  <div [ngSwitch]="item.status">
-                    <span *ngSwitchCase="ImportStatus.VALID" class="flex items-center text-emerald-500 p-1.5 rounded-lg bg-emerald-500/10 w-fit">
-                      <span class="material-symbols-rounded text-lg">check_circle</span>
+            <tbody class="divide-y divide-slate-50">
+              @for (item of items; track $index) {
+                <tr 
+                  class="group hover:bg-slate-50 transition-colors"
+                  [class.opacity-50]="!item.selected"
+                >
+                  <td class="p-4">
+                    <div class="relative flex items-center">
+                      <input 
+                        type="checkbox" 
+                        [(ngModel)]="item.selected"
+                        (change)="checkSelection()"
+                        [disabled]="item.status === ImportStatus.INVALID"
+                        class="peer h-5 w-5 appearance-none rounded-md border-2 border-slate-300 bg-white checked:bg-emerald-500 checked:border-emerald-500 transition-all duration-200 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                      >
+                      <mat-icon class="absolute text-white text-xs opacity-0 peer-checked:opacity-100 pointer-events-none left-1.5 top-1.5">check</mat-icon>
+                    </div>
+                  </td>
+                  <td class="p-4">
+                    @switch (item.status) {
+                      @case (ImportStatus.VALID) {
+                        <div class="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center">
+                          <mat-icon class="text-emerald-600 text-lg">check</mat-icon>
+                        </div>
+                      }
+                      @case (ImportStatus.WARNING) {
+                        <div class="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center" [title]="item.errors.join(', ')">
+                          <mat-icon class="text-orange-600 text-lg">warning</mat-icon>
+                        </div>
+                      }
+                      @case (ImportStatus.INVALID) {
+                        <div class="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center" [title]="item.errors.join(', ')">
+                          <mat-icon class="text-red-600 text-lg">error</mat-icon>
+                        </div>
+                      }
+                    }
+                  </td>
+                  <td class="p-4 text-sm font-medium text-slate-600 whitespace-nowrap">{{ item.date | date:'dd/MM/yyyy' }}</td>
+                  <td class="p-4 text-sm font-semibold text-slate-800 capitalize">{{ item.description }}</td>
+                  <td class="p-4">
+                    <span class="px-3 py-1.5 rounded-full text-xs font-bold" [class]="getCategoryClass(item.category)">
+                      {{ item.category || 'Sem categoria' }}
                     </span>
-                    <span *ngSwitchCase="ImportStatus.WARNING" class="flex items-center text-orange-500 p-1.5 rounded-lg bg-orange-500/10 w-fit" [title]="item.errors.join(', ')">
-                      <span class="material-symbols-rounded text-lg">warning</span>
-                    </span>
-                    <span *ngSwitchCase="ImportStatus.INVALID" class="flex items-center text-red-500 p-1.5 rounded-lg bg-red-500/10 w-fit" [title]="item.errors.join(', ')">
-                      <span class="material-symbols-rounded text-lg">error</span>
-                    </span>
-                  </div>
-                </td>
-                <td class="p-4 text-sm font-medium text-slate-700 dark:text-slate-300 whitespace-nowrap">{{ item.date | date:'dd/MM/yyyy' }}</td>
-                <td class="p-4 text-sm font-semibold text-slate-900 dark:text-white capitalize">{{ item.description }}</td>
-                <td class="p-4">
-                  <div class="flex items-center space-x-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 px-3 py-1.5 rounded-xl w-fit group-hover:border-emerald-500/50 transition-colors">
-                    <span class="text-xs font-bold text-slate-600 dark:text-slate-400">{{ item.category || 'Selecionar' }}</span>
-                    <span class="material-symbols-rounded text-sm text-slate-400 group-hover:text-emerald-500 transition-colors">expand_more</span>
-                  </div>
-                </td>
-                <td class="p-4 text-sm font-bold text-right" [class]="item.type === 'income' ? 'text-emerald-500' : 'text-slate-900 dark:text-white'">
-                  {{ item.type === 'expense' ? '-' : '+' }} {{ item.amount | currency:'BRL' }}
-                </td>
-                <td class="p-4">
-                  <button class="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 transition-all">
-                    <span class="material-symbols-rounded text-lg">delete</span>
-                  </button>
-                </td>
-              </tr>
+                  </td>
+                  <td class="p-4 text-sm font-bold text-right" [class]="item.type === 'income' ? 'text-emerald-600' : 'text-slate-800'">
+                    {{ item.type === 'expense' ? '- ' : '+ ' }}R$ {{ item.amount | number:'1.2-2' }}
+                  </td>
+                  <td class="p-4">
+                    <button class="opacity-0 group-hover:opacity-100 p-2 text-slate-400 hover:text-red-500 transition-all">
+                      <mat-icon class="text-lg">delete</mat-icon>
+                    </button>
+                  </td>
+                </tr>
+              }
             </tbody>
           </table>
         </div>
       </div>
 
-      <!-- Action Bar -->
-      <div class="flex flex-col sm:flex-row items-center justify-between gap-6 bg-slate-900 text-white p-6 rounded-3xl shadow-2xl transition-all duration-300">
-        <div class="flex items-center space-x-8">
+      <!-- Action Bar (Summary) -->
+      <div class="bg-white rounded-3xl shadow-xl shadow-slate-200 p-6 flex flex-col md:flex-row items-center justify-between gap-6">
+        <div class="flex items-center gap-8">
           <div class="space-y-1">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Total Selecionado</span>
-            <div class="text-2xl font-black text-white">{{ selectedBalance | currency:'BRL' }}</div>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total de Lançamentos</span>
+            <div class="text-2xl font-black text-slate-900">{{ selectedCount }}</div>
           </div>
-          <div class="h-10 w-px bg-slate-800"></div>
+          <div class="h-10 w-px bg-slate-200"></div>
           <div class="space-y-1">
-            <span class="text-xs font-bold uppercase tracking-wider text-slate-400">Lançamentos</span>
-            <div class="text-2xl font-black text-white">{{ selectedCount }} <span class="text-sm font-medium text-slate-500">de {{ items.length }}</span></div>
+            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Valor Total</span>
+            <div class="text-2xl font-black text-slate-900">R$ {{ selectedBalance | number:'1.2-2' }}</div>
           </div>
         </div>
 
-        <div class="flex items-center gap-4 w-full sm:w-auto">
+        <div class="flex items-center gap-4 w-full md:w-auto">
           <button 
             (click)="cancel.emit()"
-            class="flex-1 sm:flex-none px-6 py-3.5 h-14 rounded-2xl bg-slate-800 hover:bg-slate-700 font-bold transition-all"
+            class="flex-1 md:flex-none px-6 py-3.5 h-14 rounded-2xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold transition-all"
           >
-            Voltar
+            Cancelar
           </button>
           <button 
             (click)="confirmImport()"
             [disabled]="!selectedTargetId || selectedCount === 0"
-            class="flex-[2] sm:flex-none px-8 py-3.5 h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-400 disabled:opacity-30 disabled:hover:bg-emerald-500 font-bold text-slate-950 flex items-center justify-center space-x-2 transition-all"
+            class="flex-[2] md:flex-none px-8 py-3.5 h-14 rounded-2xl bg-emerald-500 hover:bg-emerald-600 disabled:opacity-30 disabled:hover:bg-emerald-500 text-white font-bold flex items-center justify-center gap-2 transition-all"
           >
-            <span class="material-symbols-rounded">check_circle</span>
-            <span>Importar Agora</span>
+            <mat-icon>check_circle</mat-icon>
+            Confirmar Importação
           </button>
         </div>
       </div>
+
+      <!-- Footer Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <!-- Card 1: Categorização -->
+        <div class="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-purple-100 flex items-center justify-center">
+              <mat-icon class="text-purple-600">auto_awesome</mat-icon>
+            </div>
+            <h4 class="text-sm font-bold text-slate-900">Categorização Automática</h4>
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Identificamos {{ categorizedCount() }} categorias a partir das descrições dos lançamentos.
+          </p>
+        </div>
+
+        <!-- Card 2: Segurança -->
+        <div class="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-blue-100 flex items-center justify-center">
+              <mat-icon class="text-blue-600">shield</mat-icon>
+            </div>
+            <h4 class="text-sm font-bold text-slate-900">Segurança na Importação</h4>
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            Seus dados são processados localmente com criptografia. Nenhuma informação sensível é armazenada em nossos servidores.
+          </p>
+        </div>
+
+        <!-- Card 3: Impacto no Fluxo -->
+        <div class="p-5 bg-white rounded-3xl border border-slate-100 shadow-sm">
+          <div class="flex items-center gap-3 mb-3">
+            <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+              <mat-icon class="text-emerald-600">trending_up</mat-icon>
+            </div>
+            <h4 class="text-sm font-bold text-slate-900">Impacto no Fluxo de Caixa</h4>
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed">
+            @if (selectedBalance >= 0) {
+              Esta importação adicionará <span class="text-emerald-600 font-bold">R$ {{ selectedBalance | number:'1.2-2' }}</span> ao seu saldo.
+            } @else {
+              Esta importação representa uma despesa de <span class="text-red-500 font-bold">R$ {{ selectedBalance | number:'1.2-2' }}</span>.
+            }
+          </p>
+        </div>
+      </div>
+
     </div>
   `,
   styles: [`
@@ -173,9 +240,7 @@ export class ImportacaoPreviewComponent {
   selectedTargetId = '';
 
   get filteredTargets() {
-    const typeStr = this.selectedType === ImportType.TRANSACTION ? 'checking' : 'credit_card';
     const list = this.accounts.filter(a => {
-      // Logic for checking/savings vs credit_card
       if (this.selectedType === ImportType.TRANSACTION) {
         return a.account_type !== 'credit_card';
       }
@@ -202,12 +267,9 @@ export class ImportacaoPreviewComponent {
     return this.items.length > 0 && this.items.every(i => i.selected || i.status === ImportStatus.INVALID);
   }
 
-  onTypeChange() {
-    this.selectedTargetId = '';
-    const list = this.filteredTargets;
-    if (list.length > 0) {
-      this.selectedTargetId = list[0].id;
-    }
+  categorizedCount() {
+    const categories = new Set(this.items.filter(i => i.selected && i.category).map(i => i.category));
+    return categories.size;
   }
 
   toggleAll() {
@@ -217,9 +279,7 @@ export class ImportacaoPreviewComponent {
     });
   }
 
-  checkSelection() {
-    // Handled by Signal computed equivalent in get syntax
-  }
+  checkSelection() {}
 
   confirmImport() {
     if (this.selectedTargetId && this.selectedCount > 0) {
@@ -229,5 +289,31 @@ export class ImportacaoPreviewComponent {
         targetId: this.selectedTargetId
       });
     }
+  }
+
+  getCategoryClass(category: string): string {
+    const catLower = (category || '').toLowerCase();
+    const colors: Record<string, string> = {
+      alimentacao: 'bg-orange-100 text-orange-700',
+      alimentação: 'bg-orange-100 text-orange-700',
+      comida: 'bg-orange-100 text-orange-700',
+      transporte: 'bg-blue-100 text-blue-700',
+      transport: 'bg-blue-100 text-blue-700',
+      salario: 'bg-emerald-100 text-emerald-700',
+      salary: 'bg-emerald-100 text-emerald-700',
+      renda: 'bg-emerald-100 text-emerald-700',
+      receita: 'bg-emerald-100 text-emerald-700',
+      shopping: 'bg-purple-100 text-purple-700',
+      utilities: 'bg-yellow-100 text-yellow-700',
+      contas: 'bg-yellow-100 text-yellow-700',
+      luz: 'bg-yellow-100 text-yellow-700',
+      agua: 'bg-blue-100 text-blue-700',
+      internet: 'bg-indigo-100 text-indigo-700',
+      saude: 'bg-red-100 text-red-700',
+      saúde: 'bg-red-100 text-red-700',
+      ocio: 'bg-pink-100 text-pink-700',
+      lazer: 'bg-pink-100 text-pink-700',
+    };
+    return colors[catLower] || 'bg-slate-100 text-slate-600';
   }
 }
