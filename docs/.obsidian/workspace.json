@@ -20,8 +20,21 @@
               "icon": "lucide-file",
               "title": "Recursos_Checklist"
             }
+          },
+          {
+            "id": "d37ca15700669461",
+            "type": "leaf",
+            "state": {
+              "type": "release-notes",
+              "state": {
+                "currentVersion": "1.12.7"
+              },
+              "icon": "lucide-book-up",
+              "title": "Notas de Lançamento 1.12.7"
+            }
           }
-        ]
+        ],
+        "currentTab": 1
       }
     ],
     "direction": "vertical"
@@ -183,7 +196,7 @@
       "bases:Criar nova base": false
     }
   },
-  "active": "0c722ead88c7b57f",
+  "active": "d37ca15700669461",
   "lastOpenFiles": [
     "SmartMoney.md",
     "Recursos_Checklist.md"

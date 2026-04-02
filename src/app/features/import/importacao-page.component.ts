@@ -230,7 +230,7 @@ interface RecentImport {
           </div>
 
           <!-- Right Column (30%) -->
-          <div class="lg:col-span-4 space-y-8">
+          <div class="lg:col-span-4 space-y-8 self-start">
             
             <!-- Instructions Card -->
             <div class="p-8 bg-white rounded-[2.5rem] border border-slate-100 shadow-sm relative overflow-hidden group">
@@ -388,14 +388,22 @@ export class ImportacaoPageComponent {
     this.loadingMsg.set('Salvando lançamentos no banco...');
     this.processing.set(true);
 
+    const safetyTimeout = setTimeout(() => {
+      if (this.processing()) {
+        this.processing.set(false);
+        alert('A operação demorou mais do que o esperado. Verifique sua conexão e tente novamente.');
+      }
+    }, 30000);
+
     try {
       const result = await this.importSrv.importData(event.items, event.type, event.targetId);
       this.resultSummary.set(result);
       this.currentStep.set('success');
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert('Erro ao salvar dados.');
+      alert('Erro ao salvar dados: ' + (e?.message || 'Erro desconhecido'));
     } finally {
+      clearTimeout(safetyTimeout);
       this.processing.set(false);
     }
   }

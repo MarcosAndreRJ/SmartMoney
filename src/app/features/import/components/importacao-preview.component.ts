@@ -64,15 +64,15 @@ import { SupabaseAccount } from '../../../core/services/supabase.service';
           <table class="w-full text-left border-collapse">
             <thead class="bg-slate-50">
               <tr>
-                <th class="p-4 w-12">
-                  <div class="relative flex items-center">
+                <th class="p-4 w-12 text-center">
+                  <div class="relative flex items-center justify-center mx-auto w-5 h-5">
                     <input 
                       type="checkbox" 
                       [checked]="isAllSelected" 
                       (change)="toggleAll()"
-                      class="peer h-5 w-5 appearance-none rounded-md border-2 border-slate-300 bg-white checked:bg-emerald-500 checked:border-emerald-500 transition-all duration-200 cursor-pointer"
+                      class="peer absolute inset-0 appearance-none rounded-md border-2 border-slate-200 bg-white checked:bg-emerald-500 checked:border-emerald-500 transition-all duration-300 cursor-pointer hover:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10"
                     >
-                    <mat-icon class="absolute text-white text-xs opacity-0 peer-checked:opacity-100 pointer-events-none left-1.5 top-1.5">check</mat-icon>
+                    <mat-icon class="text-white text-[14px] h-auto w-auto leading-none opacity-0 peer-checked:opacity-100 pointer-events-none z-10 transition-all duration-300">check</mat-icon>
                   </div>
                 </th>
                 <th class="p-4 text-xs font-bold text-slate-400 uppercase tracking-wider">Status</th>
@@ -89,16 +89,16 @@ import { SupabaseAccount } from '../../../core/services/supabase.service';
                   class="group hover:bg-slate-50 transition-colors"
                   [class.opacity-50]="!item.selected"
                 >
-                  <td class="p-4">
-                    <div class="relative flex items-center">
+                  <td class="p-4 text-center">
+                    <div class="relative flex items-center justify-center mx-auto w-5 h-5">
                       <input 
                         type="checkbox" 
                         [(ngModel)]="item.selected"
                         (change)="checkSelection()"
                         [disabled]="item.status === ImportStatus.INVALID"
-                        class="peer h-5 w-5 appearance-none rounded-md border-2 border-slate-300 bg-white checked:bg-emerald-500 checked:border-emerald-500 transition-all duration-200 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+                        class="peer absolute inset-0 appearance-none rounded-md border-2 border-slate-200 bg-white checked:bg-emerald-500 checked:border-emerald-500 transition-all duration-300 cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed hover:border-emerald-400 focus:ring-4 focus:ring-emerald-500/10"
                       >
-                      <mat-icon class="absolute text-white text-xs opacity-0 peer-checked:opacity-100 pointer-events-none left-1.5 top-1.5">check</mat-icon>
+                      <mat-icon class="text-white text-[14px] h-auto w-auto leading-none opacity-0 peer-checked:opacity-100 pointer-events-none z-10 transition-all duration-300">check</mat-icon>
                     </div>
                   </td>
                   <td class="p-4">
@@ -127,7 +127,7 @@ import { SupabaseAccount } from '../../../core/services/supabase.service';
                       {{ item.category || 'Sem categoria' }}
                     </span>
                   </td>
-                  <td class="p-4 text-sm font-bold text-right" [class]="item.type === 'income' ? 'text-emerald-600' : 'text-slate-800'">
+                  <td class="p-4 text-sm font-bold text-right whitespace-nowrap" [class]="item.type === 'income' ? 'text-emerald-600' : 'text-slate-800'">
                     {{ item.type === 'expense' ? '- ' : '+ ' }}R$ {{ item.amount | number:'1.2-2' }}
                   </td>
                   <td class="p-4">
@@ -152,7 +152,7 @@ import { SupabaseAccount } from '../../../core/services/supabase.service';
           <div class="h-10 w-px bg-slate-200"></div>
           <div class="space-y-1">
             <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Valor Total</span>
-            <div class="text-2xl font-black text-slate-900">R$ {{ selectedBalance | number:'1.2-2' }}</div>
+            <div class="text-2xl font-black text-slate-900 whitespace-nowrap">R$ {{ selectedBalance | number:'1.2-2' }}</div>
           </div>
         </div>
 

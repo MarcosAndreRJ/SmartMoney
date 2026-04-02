@@ -50,7 +50,7 @@ export class ImportParserService {
         mapping.date = header;
       }
       // Descrição
-      else if (['descrição', 'descriçao', 'description', 'histórico', 'estabelecimento'].includes(h)) {
+      else if (['descrição', 'descriçao', 'descricao', 'description', 'histórico', 'estabelecimento'].includes(h)) {
         mapping.description = header;
       }
       // Valor

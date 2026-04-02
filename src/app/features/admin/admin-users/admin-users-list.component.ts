@@ -4,13 +4,15 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { AdminService } from '../../../core/services/admin.service';
 import { NavigationService } from '../../../core/services/navigation.service';
+import { SupabaseService } from '../../../core/services/supabase.service';
 import { UserProfile } from '../../../core/models/admin.models';
 import { LoadingService } from '../../../core/services/loading.service';
+import { ConfirmModalComponent } from '../../../shared/components/confirm-modal.component';
 
 @Component({
   selector: 'app-admin-users',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule],
+  imports: [CommonModule, FormsModule, MatIconModule, ConfirmModalComponent],
   template: `
     <div class="p-8">
       <!-- Header -->
@@ -104,6 +106,13 @@ import { LoadingService } from '../../../core/services/loading.service';
                               [title]="user.role === 'admin' ? 'Remover admin' : 'Tornar admin'">
                         <mat-icon>swap_vert</mat-icon>
                       </button>
+                      @if (user.id !== currentUserId()) {
+                        <button (click)="requestDeleteUser(user.id, user.name)"
+                                class="p-2 text-slate-300 hover:bg-red-50 hover:text-red-500 rounded-lg transition-colors"
+                                title="Excluir usuário permanentemente">
+                          <mat-icon>person_remove</mat-icon>
+                        </button>
+                      }
                     </div>
                   </td>
                 </tr>
@@ -261,6 +270,7 @@ export class AdminUsersComponent implements OnInit {
   private adminService = inject(AdminService);
   private navSrv = inject(NavigationService);
   private loadingSrv = inject(LoadingService);
+  private supabase = inject(SupabaseService);
   
   users = signal<UserProfile[]>([]);
   filteredUsers = signal<UserProfile[]>([]);
@@ -404,5 +414,36 @@ export class AdminUsersComponent implements OnInit {
   formatDate(date: string | undefined): string {
     if (!date) return '-';
     return new Date(date).toLocaleDateString('pt-BR');
+  }
+
+  userToDelete = signal<{ id: string; name: string } | null>(null);
+  showDeleteConfirm = signal(false);
+
+  async currentUserId() {
+    const user = await this.adminService.getCurrentUser();
+    return user?.id;
+  }
+
+  requestDeleteUser(userId: string, userName: string) {
+    this.userToDelete.set({ id: userId, name: userName });
+    this.showDeleteConfirm.set(true);
+  }
+
+  async confirmDeleteUser() {
+    const target = this.userToDelete();
+    if (!target) return;
+    
+    this.showDeleteConfirm.set(false);
+    this.loading.set(true);
+    
+    const result = await this.adminService.deleteUser(target.id);
+    
+    if (result.success) {
+      this.users.update(list => list.filter(u => u.id !== target.id));
+    } else {
+      alert(`Erro ao excluir usuário: ${result.error}`);
+    }
+    
+    this.loading.set(false);
   }
 }

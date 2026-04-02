@@ -33,7 +33,7 @@ export class ImportService {
       if (!error) success = records.length;
       else {
         console.error('Erro na importação de transações:', error);
-        errors = records.length;
+        throw new Error(error.message);
       }
     } 
     else if (type === ImportType.CARD) {
@@ -51,7 +51,7 @@ export class ImportService {
       if (!error) success = records.length;
       else {
         console.error('Erro na importação de cartões:', error);
-        errors = records.length;
+        throw new Error(error.message);
       }
     }
 

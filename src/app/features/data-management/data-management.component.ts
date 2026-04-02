@@ -2,6 +2,7 @@ import { Component, signal, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { MatIconModule } from '@angular/material/icon';
 import { SupabaseService } from '../../core/services/supabase.service';
+import { AdminService } from '../../core/services/admin.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { ConfirmModalComponent } from '../../shared/components/confirm-modal.component';
 
@@ -84,6 +85,7 @@ interface DataModule {
 })
 export class DataManagementComponent {
   private supabase = inject(SupabaseService);
+  private adminSrv = inject(AdminService);
   private loading = inject(LoadingService);
 
   showConfirm = signal(false);
@@ -170,28 +172,12 @@ export class DataManagementComponent {
     const user = await this.supabase.getUser();
     if (!user) return;
 
-    // Ordered wipe to avoid FK issues if cascade fails (though CASCADE is preferred)
-    const tables = [
-      'loan_payments', 'loans', 
-      'investment_transactions', 'investments', 
-      'goal_contributions', 'goals',
-      'recurring_transactions', 'transactions',
-      'account_invitations', 'account_access',
-      'contacts', 'categories', 'notifications',
-      'accounts'
-    ];
-
-    for (const table of tables) {
-      await this.supabase.client.from(table).delete().eq('user_id', user.id);
+    const result = await this.adminSrv.deleteUser(user.id);
+    
+    if (result.success) {
+      await this.supabase.signOut();
+    } else {
+      alert(`Erro ao excluir conta: ${result.error}`);
     }
-
-    // Reset recurring scheduler markers for the user (just in case they sign in later)
-    await this.supabase.client
-      .from('recurring_transactions')
-      .update({ last_generated_date: null })
-      .eq('user_id', user.id);
-
-    // Finally logout
-    await this.supabase.signOut();
   }
 }

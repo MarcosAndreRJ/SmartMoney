@@ -119,6 +119,10 @@ export class SupabaseService {
     return this.supabase;
   }
 
+  getUrl(): string {
+    return 'https://niobxjtufruqliakyydv.supabase.co';
+  }
+
   // Example: Get current user
   async getUser() {
     const { data: { user } } = await this.supabase.auth.getUser();

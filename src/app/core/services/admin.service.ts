@@ -17,6 +17,10 @@ export class AdminService {
     return role === 'admin';
   }
 
+  async getCurrentUser() {
+    return await this.supabase.getUser();
+  }
+
   async getMetrics(): Promise<AdminMetrics | null> {
     const { data, error } = await this.client.rpc('get_admin_metrics');
     if (error) { 
@@ -104,6 +108,34 @@ export class AdminService {
       user_metadata: { disabled: true }
     });
     return !error;
+  }
+
+  async deleteUser(userIdToDelete: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { data: { session } } = await this.client.auth.getSession();
+      if (!session) return { success: false, error: 'Sessão inválida' };
+
+      const response = await fetch(
+        `${this.supabase.getUrl()}/functions/v1/delete-user`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`
+          },
+          body: JSON.stringify({ userIdToDelete })
+        }
+      );
+
+      if (!response.ok) {
+        const err = await response.json();
+        return { success: false, error: err.error || 'Erro ao excluir usuário' };
+      }
+
+      return { success: true };
+    } catch (e: any) {
+      return { success: false, error: e.message };
+    }
   }
 
   async getPlans(): Promise<Plan[]> {
