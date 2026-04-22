@@ -1,6 +1,6 @@
 import { Injectable, inject } from '@angular/core';
 import { SupabaseService } from './supabase.service';
-import { PlanCode } from '../constants/plans.constants';
+import { PlanCode, PLAN_FEATURES } from '../constants/plans.constants';
 
 @Injectable({
   providedIn: 'root'
@@ -41,6 +41,27 @@ export class BillingService {
       resources: planData?.resources || {}, 
       isPremium: userData.is_premium_active 
     };
+  }
+
+  async getAccountLimit(): Promise<number | null> {
+    const { resources, plan } = await this.getUserPlan();
+    
+    // 1. Tentar via resources do banco (mais atualizado)
+    if (resources && resources.max_accounts !== undefined) {
+      return resources.max_accounts;
+    }
+
+    // 2. Fallback para PLAN_FEATURES estático
+    const features = PLAN_FEATURES[plan] || [];
+    const accountsFeature = features.find(f => f.startsWith('accounts:'));
+    
+    if (accountsFeature) {
+      const value = accountsFeature.split(':')[1];
+      if (value === 'unlimited') return null;
+      return parseInt(value, 10);
+    }
+
+    return 2; // Default fallback (Basic)
   }
 
   async startCheckout(priceId: string): Promise<string> {

@@ -157,10 +157,27 @@ type TxTypeFilter = 'all' | 'income' | 'expense' | 'transfer';
               <button (click)="setRange(7)" class="text-xs font-bold transition-colors"
                 [class.text-slate-800]="dateRange() === 7" [class.bg-slate-100]="dateRange() === 7" [class.px-3]="dateRange() === 7" [class.py-1.5]="dateRange() === 7" [class.rounded-lg]="dateRange() === 7"
                 [class.text-slate-500]="dateRange() !== 7" [class.hover:text-slate-800]="dateRange() !== 7">7 dias</button>
+              <button (click)="setRange(-2)" class="text-xs font-bold transition-colors"
+                [class.text-slate-800]="dateRange() === -2" [class.bg-slate-100]="dateRange() === -2" [class.px-3]="dateRange() === -2" [class.py-1.5]="dateRange() === -2" [class.rounded-lg]="dateRange() === -2"
+                [class.text-slate-500]="dateRange() !== -2" [class.hover:text-slate-800]="dateRange() !== -2">Por Mês</button>
               <button (click)="openCustomFilterModal()" class="text-xs font-bold transition-colors"
                 [class.text-slate-800]="dateRange() === 0" [class.bg-slate-100]="dateRange() === 0" [class.px-3]="dateRange() === 0" [class.py-1.5]="dateRange() === 0" [class.rounded-lg]="dateRange() === 0"
                 [class.text-slate-500]="dateRange() !== 0" [class.hover:text-slate-800]="dateRange() !== 0">Personalizado</button>
             </div>
+
+            @if (dateRange() === -2) {
+              <div class="flex items-center gap-2 bg-slate-50 p-1 rounded-xl border border-slate-200 animate-in slide-in-from-left duration-300">
+                <button (click)="prevMonth()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-600 transition-all">
+                  <mat-icon class="text-lg">chevron_left</mat-icon>
+                </button>
+                <span class="text-[10px] font-black text-slate-700 uppercase tracking-widest min-w-[100px] text-center">
+                  {{ getMonthYearLabel() }}
+                </span>
+                <button (click)="nextMonth()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-white hover:shadow-sm text-slate-600 transition-all">
+                  <mat-icon class="text-lg">chevron_right</mat-icon>
+                </button>
+              </div>
+            }
 
             <div class="hidden md:block w-px h-4 bg-slate-200"></div>
 
@@ -578,6 +595,7 @@ export class TransactionsPageComponent implements OnInit {
   dateRange = signal<number>(-1); // -1 = 'Todos', 30, 7, 0 = 'Personalizado'
   typeFilter = signal<TxTypeFilter>('all');
   statusFilter = signal<'all' | 'confirmed' | 'pending' | 'cancelled'>('all');
+  currentMonthNav = signal<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
 
   // Modal State
   showCustomFilterModal = signal(false);
@@ -642,6 +660,28 @@ export class TransactionsPageComponent implements OnInit {
       // 'Todos' - no limits
       cutoff = null;
       endCutoff = null;
+    } else if (range === -2) {
+      // 'Por Mês' - filter by selected month/year
+      const nav = this.currentMonthNav();
+      const targetMonth = nav.getMonth();
+      const targetYear = nav.getFullYear();
+      
+      return all.filter(tx => {
+        // Search
+        const matchesQuery = !query
+          || tx.description.toLowerCase().includes(query)
+          || (tx.category || '').toLowerCase().includes(query);
+        if (!matchesQuery) return false;
+
+        const txDateStr = (tx.date || '').split('T')[0];
+        const txDate = new Date(txDateStr + 'T12:00:00');
+        
+        const matchesMonth = txDate.getMonth() === targetMonth && txDate.getFullYear() === targetYear;
+        const matchesType = type === 'all' || tx.type === type;
+        const matchesStatus = status === 'all' || tx.status === status;
+        
+        return matchesMonth && matchesType && matchesStatus;
+      });
     }
 
     return all.filter(tx => {
@@ -810,7 +850,12 @@ export class TransactionsPageComponent implements OnInit {
 
       if (updateError) throw updateError;
 
-      // 3. Refresh data
+      // 3. SE a transação estiver vinculada a um empréstimo, atualiza o contrato
+      if (tx.loan_id) {
+        await this.syncLoanData(tx.loan_id);
+      }
+
+      // 4. Refresh data
       await this.loadTransactions();
       this.closePaymentModal();
     } catch (err) {
@@ -870,6 +915,11 @@ export class TransactionsPageComponent implements OnInit {
 
       if (updateError) throw updateError;
 
+      // 3. Sincronizar com Empréstimo se houver vínculo
+      if (tx.loan_id) {
+        await this.syncLoanData(tx.loan_id);
+      }
+
       await this.loadTransactions();
       this.closeActionModal();
     } catch (err) {
@@ -917,7 +967,12 @@ export class TransactionsPageComponent implements OnInit {
 
       if (error) throw error;
 
-      // 3. Refresh and Close
+      // 3. Sincronizar com Empréstimo se houver vínculo
+      if (tx.loan_id) {
+        await this.syncLoanData(tx.loan_id);
+      }
+
+      // 4. Refresh and Close
       await this.loadTransactions();
       this.closeDeleteModal();
       this.closeActionModal();
@@ -929,7 +984,37 @@ export class TransactionsPageComponent implements OnInit {
     }
   }
 
-  setRange(r: number) { this.dateRange.set(r); }
+  private async syncLoanData(loanId: string) {
+    await this.supabase.syncLoanData(loanId);
+  }
+
+  setRange(r: number) { 
+    this.dateRange.set(r); 
+    if (r === -2) {
+      this.currentMonthNav.set(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+    }
+  }
+
+  prevMonth() {
+    const d = new Date(this.currentMonthNav());
+    d.setMonth(d.getMonth() - 1);
+    this.currentMonthNav.set(d);
+  }
+
+  nextMonth() {
+    const d = new Date(this.currentMonthNav());
+    d.setMonth(d.getMonth() + 1);
+    this.currentMonthNav.set(d);
+  }
+
+  getMonthYearLabel(): string {
+    const nav = this.currentMonthNav();
+    const months = [
+      'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+      'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'
+    ];
+    return `${months[nav.getMonth()]} ${nav.getFullYear()}`;
+  }
   setType(t: TxTypeFilter) { this.typeFilter.set(t); }
   setStatus(s: 'all' | 'confirmed' | 'pending' | 'cancelled') { this.statusFilter.set(s); }
 

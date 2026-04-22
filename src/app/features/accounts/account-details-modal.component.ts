@@ -51,6 +51,23 @@ import { Account } from '../../core/models/account.model';
             <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Tipo de Conta</p>
             <p class="text-base font-bold text-slate-900 capitalize">{{ account().details || account().type }}</p>
           </div>
+
+          @if (account().agencyNumber || account().accountNumber) {
+            <div class="col-span-2 pt-3 border-t border-slate-100 flex gap-8">
+              @if (account().agencyNumber) {
+                <div>
+                  <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Agência</p>
+                  <p class="text-sm font-bold text-slate-700">{{ account().agencyNumber }}</p>
+                </div>
+              }
+              @if (account().accountNumber) {
+                <div>
+                  <p class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider mb-1">Número da Conta</p>
+                  <p class="text-sm font-bold text-slate-700">{{ account().accountNumber }}</p>
+                </div>
+              }
+            </div>
+          }
         </div>
 
         <!-- Quick Statement Section -->

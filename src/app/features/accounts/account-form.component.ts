@@ -4,6 +4,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { SupabaseService, SupabaseAccount } from '../../core/services/supabase.service';
 import { ToastService } from '../../shared/services/toast.service';
+import { BillingService } from '../../core/services/billing.service';
 
 @Component({
   selector: 'app-account-form',
@@ -72,40 +73,114 @@ import { ToastService } from '../../shared/services/toast.service';
 
             <!-- Credit Card fields -->
             @if (accountForm.get('account_type')?.value === 'credit_card') {
-              <div class="space-y-2">
-                <label for="creditLimit" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Limite de Crédito</label>
-                <div class="relative">
-                  <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">R$</span>
+              <div class="space-y-4 pt-4 border-t border-slate-50">
+                <div class="space-y-2">
+                  <label for="cardName" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nome Impresso no Cartão</label>
                   <input 
-                    id="creditLimit"
-                    type="number" 
-                    formControlName="credit_limit"
-                    placeholder="0,00"
-                    class="w-full pl-12 pr-4 py-4 bg-[#F8F9FA] border border-transparent rounded-2xl focus:bg-white focus:border-slate-200 focus:outline-none transition-all text-slate-600 font-medium"
+                    id="cardName"
+                    type="text" 
+                    formControlName="card_name"
+                    placeholder="Ex: MARCOS A C SILVA"
+                    class="w-full px-4 py-4 bg-[#F8F9FA] border border-transparent rounded-2xl focus:bg-white focus:border-slate-200 focus:outline-none transition-all text-slate-600 font-medium"
                   >
                 </div>
-              </div>
 
+                <div class="space-y-2">
+                  <label for="cardNumber" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Número do Cartão</label>
+                  <input 
+                    id="cardNumber"
+                    type="text" 
+                    formControlName="card_number"
+                    placeholder="Ex: 1234 5678 1234 5678"
+                    class="w-full px-4 py-4 bg-[#F8F9FA] border border-transparent rounded-2xl focus:bg-white focus:border-slate-200 focus:outline-none transition-all text-slate-600 font-medium"
+                  >
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <label for="cardExpiration" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Vencimento (MM/AA)</label>
+                    <input 
+                      id="cardExpiration"
+                      type="text" 
+                      formControlName="card_expiration"
+                      placeholder="Ex: 09/25"
+                      class="w-full px-4 py-4 bg-[#F8F9FA] border border-transparent rounded-2xl focus:bg-white focus:border-slate-200 focus:outline-none transition-all text-slate-600 font-medium"
+                    >
+                  </div>
+                  <div class="space-y-2">
+                    <label for="cardCvv" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">CVV</label>
+                    <input 
+                      id="cardCvv"
+                      type="password" 
+                      maxlength="3"
+                      formControlName="card_cvv"
+                      placeholder="Ex: 123"
+                      class="w-full px-4 py-4 bg-[#F8F9FA] border border-transparent rounded-2xl focus:bg-white focus:border-slate-200 focus:outline-none transition-all text-slate-600 font-medium"
+                    >
+                  </div>
+                </div>
+
+                <div class="space-y-2">
+                  <label for="creditLimit" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Limite de Crédito</label>
+                  <div class="relative">
+                    <span class="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 font-bold">R$</span>
+                    <input 
+                      id="creditLimit"
+                      type="number" 
+                      formControlName="credit_limit"
+                      placeholder="0,00"
+                      class="w-full pl-12 pr-4 py-4 bg-[#F8F9FA] border border-transparent rounded-2xl focus:bg-white focus:border-slate-200 focus:outline-none transition-all text-slate-600 font-medium"
+                    >
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-4">
+                  <div class="space-y-2">
+                    <label for="closingDate" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dia Fechamento</label>
+                    <input 
+                      id="closingDate"
+                      type="number" 
+                      formControlName="closing_date"
+                      placeholder="Ex: 10"
+                      min="1" max="31"
+                      class="w-full px-4 py-4 bg-[#F8F9FA] border border-transparent rounded-2xl focus:bg-white focus:border-slate-200 focus:outline-none transition-all text-slate-600 font-medium"
+                    >
+                  </div>
+                  <div class="space-y-2">
+                    <label for="dueDate" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dia Vencimento</label>
+                    <input 
+                      id="dueDate"
+                      type="number" 
+                      formControlName="due_date"
+                      placeholder="Ex: 15"
+                      min="1" max="31"
+                      class="w-full px-4 py-4 bg-[#F8F9FA] border border-transparent rounded-2xl focus:bg-white focus:border-slate-200 focus:outline-none transition-all text-slate-600 font-medium"
+                    >
+                  </div>
+                </div>
+              </div>
+            }
+
+            <!-- Agency and Account Number (Checking/Savings only) -->
+            @if (['checking', 'savings'].includes(accountForm.get('account_type')?.value || '')) {
               <div class="grid grid-cols-2 gap-4">
                 <div class="space-y-2">
-                  <label for="closingDate" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dia Fechamento</label>
+                  <label for="agencyNumber" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nro Agência</label>
                   <input 
-                    id="closingDate"
-                    type="number" 
-                    formControlName="closing_date"
-                    placeholder="Ex: 10"
-                    min="1" max="31"
+                    id="agencyNumber"
+                    type="text" 
+                    formControlName="agency_number"
+                    placeholder="Ex: 0001"
                     class="w-full px-4 py-4 bg-[#F8F9FA] border border-transparent rounded-2xl focus:bg-white focus:border-slate-200 focus:outline-none transition-all text-slate-600 font-medium"
                   >
                 </div>
                 <div class="space-y-2">
-                  <label for="dueDate" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Dia Vencimento</label>
+                  <label for="accountNumber" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Nro Conta</label>
                   <input 
-                    id="dueDate"
-                    type="number" 
-                    formControlName="due_date"
-                    placeholder="Ex: 15"
-                    min="1" max="31"
+                    id="accountNumber"
+                    type="text" 
+                    formControlName="account_number"
+                    placeholder="Ex: 12345-6"
                     class="w-full px-4 py-4 bg-[#F8F9FA] border border-transparent rounded-2xl focus:bg-white focus:border-slate-200 focus:outline-none transition-all text-slate-600 font-medium"
                   >
                 </div>
@@ -189,6 +264,7 @@ export class AccountFormComponent {
   private fb = inject(FormBuilder);
   private supabase = inject(SupabaseService);
   private toast = inject(ToastService);
+  private billingService = inject(BillingService);
 
   formClose = output<void>();
   formSave = output<SupabaseAccount>();
@@ -211,6 +287,12 @@ export class AccountFormComponent {
     credit_limit: [null as number | null],
     closing_date: [null as number | null],
     due_date: [null as number | null],
+    agency_number: [''],
+    account_number: [''],
+    card_name: [''],
+    card_number: [''],
+    card_expiration: [''],
+    card_cvv: [''],
   });
 
   constructor() {
@@ -224,6 +306,12 @@ export class AccountFormComponent {
           credit_limit: acc.credit_limit ?? null,
           closing_date: acc.closing_date ?? null,
           due_date: acc.due_date ?? null,
+          agency_number: acc.agency_number ?? '',
+          account_number: acc.account_number ?? '',
+          card_name: acc.card_name ?? '',
+          card_number: acc.card_number ?? '',
+          card_expiration: acc.card_expiration ?? '',
+          card_cvv: acc.card_cvv ?? '',
         });
         this.selectedColor.set(acc.color || '#0F172A');
         this.selectedIcon.set(acc.icon || 'account_balance');
@@ -252,17 +340,27 @@ export class AccountFormComponent {
 
     try {
       const formValue = this.accountForm.value;
-      const accountData = {
+      
+      // Criar objeto e limpar atributos undefined/vazios para evitar Erro 400
+      const accountData: any = {
         institution_name: formValue.institution_name!,
         account_type: formValue.account_type!,
         initial_balance: formValue.initial_balance ?? 0,
-        credit_limit: formValue.credit_limit ?? undefined,
-        closing_date: formValue.closing_date ?? undefined,
-        due_date: formValue.due_date ?? undefined,
         color: this.selectedColor(),
         icon: this.selectedIcon(),
         is_main_account: this.isMainAccount(),
       };
+
+      // Adicionar campos opcionais apenas se tiverem valor
+      if (formValue.credit_limit) accountData.credit_limit = formValue.credit_limit;
+      if (formValue.closing_date) accountData.closing_date = formValue.closing_date;
+      if (formValue.due_date) accountData.due_date = formValue.due_date;
+      if (formValue.agency_number) accountData.agency_number = formValue.agency_number;
+      if (formValue.account_number) accountData.account_number = formValue.account_number;
+      if (formValue.card_name) accountData.card_name = formValue.card_name;
+      if (formValue.card_number) accountData.card_number = formValue.card_number;
+      if (formValue.card_expiration) accountData.card_expiration = formValue.card_expiration;
+      if (formValue.card_cvv) accountData.card_cvv = formValue.card_cvv;
 
       const existingAcc = this.accountToEdit();
       let result;
@@ -270,10 +368,30 @@ export class AccountFormComponent {
       if (existingAcc) {
         result = await this.supabase.updateAccount(existingAcc.id, accountData);
       } else {
-        result = await this.supabase.createAccount(accountData);
+        // 1. Verificar limite proativamente antes de tentar criar
+        const limit = await this.billingService.getAccountLimit();
+        const { data: currentAccounts } = await this.supabase.getAccounts();
+        const currentCount = (currentAccounts || []).length;
+
+        if (limit !== null && currentCount >= limit) {
+          throw new Error(`Limite de ${limit} contas atingido para o seu plano. Faça upgrade para adicionar mais.`);
+        }
+
+        // 2. Tentar criar com timeout de segurança
+        const timeout = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Tempo limite excedido ao salvar conta. Verifique sua conexão.')), 15000)
+        );
+
+        const createPromise = this.supabase.createAccount(accountData);
+        result = await Promise.race([createPromise, timeout]) as any;
       }
 
       if (result.error) throw result.error;
+
+      // 3. Verificar se o RLS bloqueou silenciosamente (data null sem erro)
+      if (!result.data) {
+        throw new Error('Não foi possível salvar a conta. Verifique os limites do seu plano.');
+      }
 
       this.toast.success(
         existingAcc ? 'Conta atualizada!' : 'Conta criada!',

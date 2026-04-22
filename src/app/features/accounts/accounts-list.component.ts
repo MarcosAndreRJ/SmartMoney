@@ -52,9 +52,9 @@ export class AccountsListComponent implements OnInit {
      this.bankAccounts().reduce((sum, a) => sum + (a.initial_balance || 0), 0)
    );
 
-   availableCredit = computed(() =>
-     this.creditCards().reduce((sum, a) => sum + (a.initial_balance || 0), 0)
-   );
+    availableCredit = computed(() =>
+      this.creditCards().reduce((sum, a) => sum + ((a.credit_limit || 0) - (a.initial_balance || 0)), 0)
+    );
 
    monthlySpending = signal(0);
    spendingChange = signal(0);
@@ -90,14 +90,22 @@ export class AccountsListComponent implements OnInit {
       id: account.id,
       name: account.institution_name,
       type: account.account_type,
-      balance: `R$ ${account.initial_balance.toFixed(2)}`,
+      balance: account.account_type === 'credit_card' 
+        ? `R$ ${((account.credit_limit || 0) - (account.initial_balance || 0)).toFixed(2)}`
+        : `R$ ${account.initial_balance.toFixed(2)}`,
       balanceLabel: account.account_type === 'credit_card' ? 'Limite Disponível' : 'Saldo Atual',
       details: this.getAccountTypeLabel(account.account_type),
       icon: account.icon,
       color: account.color,
       iconBgClass: 'bg-slate-50',
       iconColorClass: 'text-slate-900',
-      badgeClass: 'bg-slate-100'
+      badgeClass: 'bg-slate-100',
+      agencyNumber: account.agency_number,
+      accountNumber: account.account_number,
+      cardName: account.card_name,
+      cardNumber: account.card_number,
+      cardExpiration: account.card_expiration,
+      cardCvv: account.card_cvv
     });
   }
 
@@ -106,14 +114,22 @@ export class AccountsListComponent implements OnInit {
       id: account.id,
       name: account.institution_name,
       type: account.account_type,
-      balance: `R$ ${account.initial_balance.toFixed(2)}`,
+      balance: account.account_type === 'credit_card' 
+        ? `R$ ${((account.credit_limit || 0) - (account.initial_balance || 0)).toFixed(2)}`
+        : `R$ ${account.initial_balance.toFixed(2)}`,
       balanceLabel: account.account_type === 'credit_card' ? 'Limite Disponível' : 'Saldo Atual',
       details: this.getAccountTypeLabel(account.account_type),
       icon: account.icon,
       color: account.color,
       iconBgClass: 'bg-slate-50',
       iconColorClass: 'text-slate-900',
-      badgeClass: 'bg-slate-100'
+      badgeClass: 'bg-slate-100',
+      agencyNumber: account.agency_number,
+      accountNumber: account.account_number,
+      cardName: account.card_name,
+      cardNumber: account.card_number,
+      cardExpiration: account.card_expiration,
+      cardCvv: account.card_cvv
     });
   }
 

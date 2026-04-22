@@ -106,8 +106,8 @@ import { ConfirmModalComponent } from '../../../shared/components/confirm-modal.
                               [title]="user.role === 'admin' ? 'Remover admin' : 'Tornar admin'">
                         <mat-icon>swap_vert</mat-icon>
                       </button>
-                      @if (user.id !== currentUserId()) {
-                        <button (click)="requestDeleteUser(user.id, user.name)"
+                      @if (user.id !== currentAdminId()) {
+                        <button (click)="requestDeleteUser(user.id!, user.name)"
                                 class="p-2 text-slate-300 hover:bg-red-50 hover:text-red-500 rounded-lg transition-colors"
                                 title="Excluir usuário permanentemente">
                           <mat-icon>person_remove</mat-icon>
@@ -264,6 +264,16 @@ import { ConfirmModalComponent } from '../../../shared/components/confirm-modal.
         </div>
       }
     </div>
+
+    <!-- Modal de Confirmação de Exclusão -->
+    @if (showDeleteConfirm()) {
+      <app-confirm-modal
+        [title]="'Excluir Usuário'"
+        [message]="'Você tem certeza que deseja excluir permanentemente o usuário ' + userToDelete()?.name + '? Todos os dados serão apagados e esta ação é IRREVERSÍVEL.'"
+        (confirm)="confirmDeleteUser()"
+        (cancel)="showDeleteConfirm.set(false)">
+      </app-confirm-modal>
+    }
   `
 })
 export class AdminUsersComponent implements OnInit {
@@ -274,6 +284,7 @@ export class AdminUsersComponent implements OnInit {
   
   users = signal<UserProfile[]>([]);
   filteredUsers = signal<UserProfile[]>([]);
+  currentAdminId = signal<string | null>(null);
   loading = signal(true);
   saving = signal(false);
   creating = signal(false);
@@ -290,6 +301,8 @@ export class AdminUsersComponent implements OnInit {
   createForm = { email: '', name: '', password: '', role: 'user' };
   
   async ngOnInit() {
+    const user = await this.adminService.getCurrentUser();
+    this.currentAdminId.set(user?.id || null);
     await this.loadUsers();
   }
   
@@ -419,7 +432,7 @@ export class AdminUsersComponent implements OnInit {
   userToDelete = signal<{ id: string; name: string } | null>(null);
   showDeleteConfirm = signal(false);
 
-  async currentUserId() {
+  async getCurrentUserId() {
     const user = await this.adminService.getCurrentUser();
     return user?.id;
   }

@@ -15,7 +15,7 @@ import { MatIconModule } from '@angular/material/icon';
           <div class="absolute inset-0 bg-[radial-gradient(circle_at_20%_30%,rgba(255,255,255,0.18),transparent_42%)]"></div>
           <div class="absolute -bottom-14 -right-12 w-80 h-80 rounded-full bg-white/10 blur-3xl"></div>
           <div class="relative max-w-md">
-            <img src="/assets/logo_clean.png" alt="SmartKonta" class="w-16 h-16 object-contain mb-10" />
+            <img src="/assets/logo_clean.png" alt="SmartKonta" width="64" height="64" class="w-16 h-16 object-contain mb-10" />
             <h2 class="text-5xl leading-tight font-extrabold">Comece a sua jornada com a SmartKonta</h2>
             <p class="mt-6 text-xl text-white/90 leading-relaxed">Junte-se a nos para atingir seus objetivos financeiros de forma rapida, segura e com uma experiencia totalmente digital e premium.</p>
           </div>
@@ -42,7 +42,7 @@ import { MatIconModule } from '@angular/material/icon';
             } @else {
               <div class="mb-8">
                 <div class="flex items-center gap-3 mb-6 lg:hidden">
-                  <img src="/assets/logo_clean.png" alt="SmartKonta" class="w-9 h-9 object-contain" />
+                  <img src="/assets/logo_clean.png" alt="SmartKonta" width="36" height="36" class="w-9 h-9 object-contain" />
                   <h1 class="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-[#2563EB] to-[#A21CAF]">SmartKonta</h1>
                 </div>
 

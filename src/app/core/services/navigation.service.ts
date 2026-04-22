@@ -65,7 +65,11 @@ export class NavigationService {
             this.selectedAccountForStatement.set(params.account);
         }
 
-        // Use standard Angular Router
-        this.router.navigate([view]);
+        // Use standard Angular Router — include categoryId in URL when relevant
+        if (params?.categoryId && (view === 'subcategories' || view === 'subcategory-form')) {
+            this.router.navigate([view], { queryParams: { categoryId: params.categoryId } });
+        } else {
+            this.router.navigate([view]);
+        }
     }
 }

@@ -3,7 +3,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import {
-  SupabaseService, SupabaseLoan, SupabaseLoanPayment, SupabaseAccount
+  SupabaseService, SupabaseLoan, SupabaseLoanPayment, SupabaseAccount, SupabaseTransaction
 } from '../../core/services/supabase.service';
 
 interface NewLoanForm {
@@ -14,6 +14,7 @@ interface NewLoanForm {
   total_installments: number | null;
   due_day: number | null;
   start_date: string;
+  account_id: string;
 }
 
 @Component({
@@ -175,24 +176,16 @@ interface NewLoanForm {
                     </td>
 
                     <!-- Ações -->
-                    <td class="px-6 py-4 text-right relative">
+                    <td class="px-6 py-4 text-right">
                       <div class="flex items-center justify-end gap-2">
                         <button (click)="openPaymentModal(loan)"
                           class="px-3 py-1.5 bg-emerald-50 text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-100 transition-colors">
                           Pagar Parcela
                         </button>
-                        <button (click)="toggleMenu(loan.id)"
+                        <button (click)="openActionModal(loan)"
                           class="w-8 h-8 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors flex items-center justify-center text-slate-400">
                           <mat-icon class="text-[18px]">more_vert</mat-icon>
                         </button>
-                        @if (activeMenuId() === loan.id) {
-                          <div class="absolute right-4 top-14 z-10 bg-white rounded-xl shadow-xl border border-slate-100 py-1 min-w-[140px]">
-                            <button (click)="deleteLoan(loan)" class="w-full px-4 py-2.5 text-left text-sm text-red-600 font-semibold hover:bg-red-50 transition-colors flex items-center gap-2">
-                              <mat-icon class="text-[16px]">delete</mat-icon> Excluir
-                            </button>
-                          </div>
-                          <div class="fixed inset-0 z-0" (click)="activeMenuId.set(null)"></div>
-                        }
                       </div>
                     </td>
                   </tr>
@@ -254,6 +247,21 @@ interface NewLoanForm {
                   <option value="fixed">Fixo</option>
                 </select>
                 <mat-icon class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">expand_more</mat-icon>
+              </div>
+            </div>
+
+            <!-- Conta Associada -->
+            <div class="space-y-1.5">
+              <label class="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">Conta Associada</label>
+              <div class="relative">
+                <select [(ngModel)]="form.account_id"
+                  class="w-full h-11 pl-4 pr-10 bg-white border border-gray-200 rounded-xl text-sm font-medium appearance-none focus:outline-none focus:ring-2 focus:ring-slate-500/20 focus:border-slate-500 transition-all">
+                  <option value="">Selecione a conta (opcional)...</option>
+                  @for (acc of accounts(); track acc.id) {
+                    <option [value]="acc.id">{{ acc.institution_name }} ({{ acc.account_type }})</option>
+                  }
+                </select>
+                <mat-icon class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none text-[18px]">account_balance</mat-icon>
               </div>
             </div>
 
@@ -329,13 +337,10 @@ interface NewLoanForm {
     }
 
     <!-- ─── PAYMENT MODAL ─────────────────────────────────────────── -->
-
-
-
     @if (loanForPayment()) {
-      <div class="fixed inset-0 z-50 flex items-end sm:items-center justify-end">
-        <div class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" (click)="loanForPayment.set(null)"></div>
-        <div class="relative bg-white h-full sm:h-auto sm:rounded-l-2xl shadow-2xl w-full sm:max-w-md flex flex-col overflow-hidden">
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" (click)="loanForPayment.set(null)"></div>
+        <div class="relative bg-white rounded-3xl shadow-2xl w-full max-w-[420px] flex flex-col overflow-hidden animate-in zoom-in-95 duration-300">
 
           <!-- Payment Header -->
           <div class="flex items-center gap-4 px-6 py-5 bg-[#0F172A]">
@@ -413,22 +418,60 @@ interface NewLoanForm {
             </div>
 
             <!-- Payment Amount -->
-            <div>
-              <label class="block text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">
-                {{ loanForPayment()!.type === 'fixed' ? 'Valor Total a Pagar' : 'Valor Total a Pagar (R$)' }}
-              </label>
-              @if (loanForPayment()!.type === 'interest') {
-                <div class="flex items-baseline gap-2 bg-white border border-slate-200 rounded-xl px-4 h-14 flex items-center">
+            <div class="space-y-4">
+              <div>
+                <label class="block text-[11px] font-extrabold text-slate-400 uppercase tracking-widest mb-2">
+                  Valor do Pagamento (R$)
+                </label>
+                <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 h-14">
                   <span class="text-slate-400 text-sm font-bold">R$</span>
-                  <input [(ngModel)]="paymentAmount" type="number" step="0.01" [min]="interestAmount()"
+                  <input [(ngModel)]="paymentAmount" type="number" step="0.01" min="0"
                     class="flex-1 text-xl font-black text-slate-900 bg-transparent outline-none"
                     (ngModelChange)="updatePrincipal()">
                 </div>
-                <p class="text-xs text-slate-400 mt-1.5 font-medium">Você pode pagar qualquer valor acima do mínimo para amortizar mais rápido.</p>
-              } @else {
-                <div class="flex items-center justify-between bg-white border border-slate-200 rounded-xl px-4 h-14">
-                  <span class="text-xl font-black text-slate-900">R$ {{ loanForPayment()!.installment_amount! | number:'1.2-2' }}</span>
-                  <mat-icon class="text-emerald-500">check_circle</mat-icon>
+                @if (loanForPayment()!.type === 'interest') {
+                  <p class="text-xs text-slate-400 mt-1.5 font-medium">Você pode pagar qualquer valor acima do mínimo para amortizar mais rápido.</p>
+                }
+              </div>
+
+              <!-- Opções de Ajuste (Somente para Fixo com diferença) -->
+              @if (showAdjustmentChoice()) {
+                <div class="p-4 bg-amber-50 border border-amber-100 rounded-2xl space-y-3 animate-in fade-in slide-in-from-top-2">
+                  <div class="flex items-center gap-2 text-amber-700">
+                    <mat-icon class="text-lg">error_outline</mat-icon>
+                    <span class="text-xs font-bold uppercase tracking-wider">Ajuste de Cronograma</span>
+                  </div>
+                  <p class="text-[11px] font-medium text-amber-600 leading-relaxed">
+                    O valor é diferente do previsto (R$ {{ loanForPayment()!.installment_amount! | number:'1.2-2' }}). como deseja tratar os 
+                    <strong class="font-black">R$ {{ (paymentAmount - loanForPayment()!.installment_amount!) | number:'1.2-2' }}</strong> de diferença?
+                  </p>
+                  
+                  <div class="flex flex-col gap-2">
+                    <button (click)="adjustmentType.set('redistribute')"
+                      [class.bg-amber-500]="adjustmentType() === 'redistribute'"
+                      [class.text-white]="adjustmentType() === 'redistribute'"
+                      [class.bg-white]="adjustmentType() !== 'redistribute'"
+                      class="flex items-center justify-between px-3 py-2.5 rounded-xl text-[10px] font-bold border border-amber-200 transition-all shadow-sm">
+                      DILUIR NAS PRÓXIMAS PARCELAS
+                      @if (adjustmentType() === 'redistribute') { <mat-icon class="text-sm">check</mat-icon> }
+                    </button>
+                    <div class="grid grid-cols-2 gap-2">
+                      <button (click)="adjustmentType.set('next')"
+                        [class.bg-amber-500]="adjustmentType() === 'next'"
+                        [class.text-white]="adjustmentType() === 'next'"
+                        [class.bg-white]="adjustmentType() !== 'next'"
+                        class="flex items-center justify-center gap-2 h-10 rounded-xl text-[10px] font-bold border border-amber-200 transition-all shadow-sm">
+                        NA PRÓXIMA
+                      </button>
+                      <button (click)="adjustmentType.set('last')"
+                        [class.bg-amber-500]="adjustmentType() === 'last'"
+                        [class.text-white]="adjustmentType() === 'last'"
+                        [class.bg-white]="adjustmentType() !== 'last'"
+                        class="flex items-center justify-center gap-2 h-10 rounded-xl text-[10px] font-bold border border-amber-200 transition-all shadow-sm">
+                        NA ÚLTIMA
+                      </button>
+                    </div>
+                  </div>
                 </div>
               }
             </div>
@@ -449,6 +492,193 @@ interface NewLoanForm {
         </div>
       </div>
     }
+
+    <!-- ─── ACTION MODAL ─── -->
+    @if (showActionModal()) {
+      <div class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm animate-in fade-in duration-300" (click)="closeActionModal()"></div>
+        <div class="relative bg-white rounded-3xl w-full max-w-sm shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+          
+          <div class="p-6 pb-4 border-b border-slate-50 relative flex items-center justify-between">
+            <h2 class="text-lg font-black text-slate-800">Ações do Empréstimo</h2>
+            <button (click)="closeActionModal()" class="w-8 h-8 rounded-full bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors flex items-center justify-center">
+              <mat-icon class="text-lg">close</mat-icon>
+            </button>
+          </div>
+
+          <div class="px-3 py-4 space-y-1">
+            <button (click)="openInstallmentsModal(actionModalLoan()!)" class="w-full text-left group flex items-start gap-4 hover:bg-indigo-50 p-3 rounded-2xl transition-colors">
+              <div class="w-10 h-10 rounded-xl bg-indigo-50 text-indigo-500 flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-colors border border-indigo-100">
+                <mat-icon class="text-[20px]">list_alt</mat-icon>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-slate-800">Listar Parcelas</h3>
+                <p class="text-[10px] font-black text-indigo-400/80 uppercase tracking-widest mt-0.5">Gerenciar cronograma e valores</p>
+              </div>
+            </button>
+
+            <button (click)="deleteLoan(actionModalLoan()!)" class="w-full text-left group flex items-start gap-4 hover:bg-red-50 p-3 rounded-2xl transition-colors">
+              <div class="w-10 h-10 rounded-xl bg-red-50 text-red-500 flex items-center justify-center group-hover:bg-red-500 group-hover:text-white transition-colors border border-red-100">
+                <mat-icon class="text-[20px]">delete_outline</mat-icon>
+              </div>
+              <div>
+                <h3 class="text-sm font-bold text-red-600">Excluir Empréstimo</h3>
+                <p class="text-[10px] font-black text-red-400/70 uppercase tracking-widest mt-0.5">Esta ação não pode ser desfeita</p>
+              </div>
+            </button>
+          </div>
+
+          <div class="p-4 pt-0">
+            <button (click)="closeActionModal()" class="w-full h-12 bg-slate-50 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-100 transition-colors">
+              FECHAR
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ─── DELETE CONFIRM MODAL ─── -->
+    @if (showDeleteConfirmModal()) {
+      <div class="fixed inset-0 z-[100] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300" (click)="showDeleteConfirmModal.set(false)"></div>
+        <div class="relative bg-white rounded-[40px] w-full max-w-sm shadow-2xl overflow-hidden p-10 flex flex-col items-center text-center animate-in zoom-in-95 duration-300">
+          
+          <div class="w-20 h-20 rounded-full bg-red-50 flex items-center justify-center mb-8">
+            <mat-icon class="text-red-500 text-4xl leading-none h-auto w-auto">error_outline</mat-icon>
+          </div>
+
+          <h2 class="text-2xl font-black text-slate-800 tracking-tight mb-4">Confirmar Exclusão</h2>
+          
+          <p class="text-sm font-medium text-slate-500 leading-relaxed mb-10">
+            Você tem certeza que deseja prosseguir? Esta ação é <span class="text-red-500 font-black">irreversível</span> e todos os dados selecionados serão perdidos permanentemente de nossos servidores.
+          </p>
+
+          <div class="grid grid-cols-2 gap-4 w-full">
+            <button (click)="showDeleteConfirmModal.set(false)" 
+              class="h-14 rounded-2xl border border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-all">
+              Cancelar
+            </button>
+            <button (click)="confirmDelete()" [disabled]="isSaving()"
+              class="h-14 rounded-2xl bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-all shadow-lg shadow-red-200 disabled:opacity-50">
+              Sim, Excluir
+            </button>
+          </div>
+        </div>
+      </div>
+    }
+
+    <!-- ─── INSTALLMENTS MODAL ─── -->
+    @if (showInstallmentsModal()) {
+      <div class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md animate-in fade-in duration-300" (click)="showInstallmentsModal.set(false)"></div>
+        <div class="relative bg-white rounded-[32px] w-full max-w-2xl max-h-[85vh] shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-300">
+          
+          <!-- Modal Header -->
+          <div class="p-8 border-b border-slate-100 flex items-center justify-between bg-white sticky top-0 z-10">
+            <div>
+              <h2 class="text-2xl font-black text-slate-800 tracking-tight">Cronograma de Parcelas</h2>
+              <p class="text-xs font-bold text-indigo-500 uppercase tracking-widest mt-1">{{ selectedLoanForInstallments()?.creditor_name }}</p>
+            </div>
+            <button (click)="showInstallmentsModal.set(false)" class="w-10 h-10 rounded-full bg-slate-50 text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all flex items-center justify-center">
+              <mat-icon>close</mat-icon>
+            </button>
+          </div>
+
+          <!-- Modal Content -->
+          <div class="flex-1 overflow-y-auto p-8 pt-4">
+            <div class="grid grid-cols-1 gap-4">
+              @for (tx of installmentTransactions(); track tx.id) {
+                <div class="group relative flex items-center gap-4 p-4 rounded-2xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50/30 transition-all">
+                  <div class="w-10 h-10 rounded-xl bg-slate-50 text-slate-400 font-black text-xs flex items-center justify-center border border-slate-100 group-hover:bg-white transition-colors">
+                    {{ tx.installment_number || 'S/N' }}
+                  </div>
+
+                  <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2 mb-0.5">
+                      <span class="text-xs font-black text-slate-800 truncate">{{ tx.description }}</span>
+                      @if (tx.status === 'confirmed') {
+                        <span class="px-1.5 py-0.5 rounded-md bg-emerald-50 text-[9px] font-black text-emerald-600 uppercase tracking-tighter">PAGO</span>
+                      } @else {
+                        <span class="px-1.5 py-0.5 rounded-md bg-amber-50 text-[9px] font-black text-amber-600 uppercase tracking-tighter">PENDENTE</span>
+                      }
+                    </div>
+                    <div class="flex items-center gap-3">
+                      <span class="text-[11px] font-bold text-slate-400">{{ (tx.date || '').split('T')[0] | date:'dd MMM, yyyy' }}</span>
+                    </div>
+                  </div>
+
+                  <div class="flex flex-col items-end gap-2">
+                    @if (isEditingInstallmentId() === tx.id) {
+                      <div class="flex items-center gap-2 bg-white border border-indigo-200 rounded-xl px-3 h-10 shadow-sm animate-in fade-in zoom-in-95">
+                        <span class="text-xs font-bold text-indigo-400">R$</span>
+                        <input [(ngModel)]="editingAmount" type="number" step="0.01" class="w-20 text-sm font-black text-slate-800 bg-transparent outline-none">
+                        <button (click)="saveInstallmentAmount(tx)" class="w-6 h-6 rounded-md bg-emerald-500 text-white flex items-center justify-center hover:bg-emerald-600 transition-colors">
+                          <mat-icon class="text-sm">check</mat-icon>
+                        </button>
+                        <button (click)="cancelEditInstallment()" class="w-6 h-6 rounded-md bg-slate-100 text-slate-400 flex items-center justify-center hover:bg-slate-200 transition-colors">
+                          <mat-icon class="text-sm">close</mat-icon>
+                        </button>
+                      </div>
+
+                      <!-- Opções de Ajuste (Inline) -->
+                      @if (showAdjustmentChoiceInList()) {
+                        <div class="p-3 bg-amber-50 border border-amber-100 rounded-xl space-y-2 animate-in slide-in-from-right-2 duration-300">
+                          <p class="text-[9px] font-black text-amber-600 uppercase tracking-widest">Tratamento da Diferença (R$ {{ (editingAmount() - tx.amount) | number:'1.2-2' }})</p>
+                          <div class="flex flex-wrap gap-1.5 justify-end">
+                            <button (click)="adjustmentTypeForList.set('redistribute')"
+                              [class.bg-amber-500]="adjustmentTypeForList() === 'redistribute'"
+                              [class.text-white]="adjustmentTypeForList() === 'redistribute'"
+                              [class.bg-white]="adjustmentTypeForList() !== 'redistribute'"
+                              class="px-2 h-7 rounded-lg text-[9px] font-black border border-amber-200 transition-all">DILUIR</button>
+                            
+                            <button (click)="adjustmentTypeForList.set('next')"
+                              [class.bg-amber-500]="adjustmentTypeForList() === 'next'"
+                              [class.text-white]="adjustmentTypeForList() === 'next'"
+                              [class.bg-white]="adjustmentTypeForList() !== 'next'"
+                              class="px-2 h-7 rounded-lg text-[9px] font-black border border-amber-200 transition-all">PRÓXIMA</button>
+                            
+                            <button (click)="adjustmentTypeForList.set('last')"
+                              [class.bg-amber-500]="adjustmentTypeForList() === 'last'"
+                              [class.text-white]="adjustmentTypeForList() === 'last'"
+                              [class.bg-white]="adjustmentTypeForList() !== 'last'"
+                              class="px-2 h-7 rounded-lg text-[9px] font-black border border-amber-200 transition-all">ÚLTIMA</button>
+
+                            @if (editingAmount() < tx.amount) {
+                              <button (click)="adjustmentTypeForList.set('new_last')"
+                                [class.bg-amber-500]="adjustmentTypeForList() === 'new_last'"
+                                [class.text-white]="adjustmentTypeForList() === 'new_last'"
+                                [class.bg-white]="adjustmentTypeForList() !== 'new_last'"
+                                class="px-2 h-7 rounded-lg text-[9px] font-black border border-amber-200 transition-all">GERAR NOVA</button>
+                            }
+                          </div>
+                        </div>
+                      }
+                    } @else {
+                      <div class="text-right">
+                        <div class="text-sm font-black text-slate-900">R$ {{ tx.amount | number:'1.2-2' }}</div>
+                        <button (click)="startEditInstallment(tx)" class="text-[10px] font-bold text-indigo-500 hover:text-indigo-700 uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity">
+                          Editar Valor
+                        </button>
+                      </div>
+                    }
+                  </div>
+                </div>
+              }
+            </div>
+          </div>
+
+          <div class="p-8 border-t border-slate-50 flex items-center justify-between bg-slate-50/50">
+            <div class="flex items-center gap-3">
+              <div class="w-2 h-2 rounded-full bg-indigo-400"></div>
+              <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest">Total de {{ installmentTransactions().length }} parcelas encontradas</p>
+            </div>
+            <button (click)="showInstallmentsModal.set(false)" class="px-6 h-10 bg-slate-900 text-white rounded-xl font-bold text-xs hover:bg-slate-800 transition-all shadow-lg shadow-slate-200">
+              Concluído
+            </button>
+          </div>
+        </div>
+      </div>
+    }
   `
 })
 export class LoansPageComponent implements OnInit {
@@ -460,11 +690,27 @@ export class LoansPageComponent implements OnInit {
   accounts = signal<SupabaseAccount[]>([]);
   showAddModal = signal(false);
   loanForPayment = signal<SupabaseLoan | null>(null);
-  activeMenuId = signal<string | null>(null);
+  
+  showActionModal = signal(false);
+  actionModalLoan = signal<SupabaseLoan | null>(null);
+  
+  // Delete confirm state
+  showDeleteConfirmModal = signal(false);
+  loanToDelete = signal<SupabaseLoan | null>(null);
+  
+  // Installments list state
+  showInstallmentsModal = signal(false);
+  selectedLoanForInstallments = signal<SupabaseLoan | null>(null);
+  installmentTransactions = signal<SupabaseTransaction[]>([]);
+  isEditingInstallmentId = signal<string | null>(null);
+  editingAmount = signal<number>(0);
 
   // Payment state
   paymentAccountId = '';
-  paymentAmount: number = 0;
+  paymentAmount = 0;
+  adjustmentType = signal<'redistribute' | 'next' | 'last'>('redistribute');
+  adjustmentTypeForList = signal<'redistribute' | 'next' | 'last' | 'new_last'>('redistribute');
+
   _principalAmountValue = 0;
 
   interestAmount = computed(() => {
@@ -477,6 +723,17 @@ export class LoansPageComponent implements OnInit {
     const minPay = this.interestAmount();
     const paid = this.paymentAmount || 0;
     return Math.max(0, parseFloat((paid - minPay).toFixed(2)));
+  });
+
+  showAdjustmentChoiceInList = computed(() => {
+    const editId = this.isEditingInstallmentId();
+    if (!editId) return false;
+    
+    const tx = this.installmentTransactions().find(t => t.id === editId);
+    if (!tx) return false;
+
+    const diff = Math.abs(this.editingAmount() - tx.amount);
+    return diff > 0.01;
   });
 
   // Form for new loan
@@ -543,20 +800,37 @@ export class LoansPageComponent implements OnInit {
     this.paymentAmount = loan.type === 'interest'
       ? parseFloat(((loan.current_balance * (loan.monthly_rate! / 100))).toFixed(2))
       : (loan.installment_amount ?? 0);
-    this.activeMenuId.set(null);
+    this.adjustmentType.set('redistribute');
   }
+
+  showAdjustmentChoice = computed(() => {
+    const loan = this.loanForPayment();
+    if (!loan || loan.type !== 'fixed') return false;
+    
+    // Se for a última parcela, não precisa de escolha, apenas quita o que sobrar
+    if (loan.paid_installments + 1 >= (loan.total_installments || 0)) return false;
+
+    const expected = loan.installment_amount || 0;
+    return Math.abs(this.paymentAmount - expected) > 0.01;
+  });
 
   updatePrincipal() {
     // Computed signal recalculates automatically
   }
 
-  toggleMenu(id: string) {
-    this.activeMenuId.set(this.activeMenuId() === id ? null : id);
+  openActionModal(loan: SupabaseLoan) {
+    this.actionModalLoan.set(loan);
+    this.showActionModal.set(true);
+  }
+
+  closeActionModal() {
+    this.showActionModal.set(false);
+    this.actionModalLoan.set(null);
   }
 
   async saveLoan() {
     const f = this.form;
-    if (!f.creditor_name.trim() || !f.initial_amount || !f.due_day || !f.start_date) return;
+    if (!f.creditor_name.trim() || !f.initial_amount || !f.due_day || !f.start_date || !f.account_id) return;
     if (f.type === 'interest' && !f.monthly_rate) return;
     if (f.type === 'fixed' && !f.total_installments) return;
 
@@ -573,6 +847,7 @@ export class LoansPageComponent implements OnInit {
         start_date: f.start_date,
         status: 'active' as const,
         total_paid: 0,
+        account_id: f.account_id || undefined,
       };
 
       // Add type-specific fields only when relevant
@@ -600,36 +875,96 @@ export class LoansPageComponent implements OnInit {
     const loan = this.loanForPayment();
     if (!loan) return;
 
-    const amount = loan.type === 'fixed' ? (loan.installment_amount ?? 0) : this.paymentAmount;
-    if (amount <= 0) return;
+    const accountId = this.paymentAccountId || loan.account_id;
+    const amount = this.paymentAmount;
+    
+    if (amount <= 0 || !accountId) return;
 
     this.isSaving.set(true);
     try {
-      const interest = this.interestAmount();
-      const principal = loan.type === 'fixed' ? amount : this.principalAmount();
+      const expectedAmount = loan.type === 'fixed' ? (loan.installment_amount ?? 0) : amount;
+      const difference = parseFloat((expectedAmount - amount).toFixed(2));
+      const hasDifference = Math.abs(difference) > 0.01 && loan.type === 'fixed';
+
+      const interest = loan.type === 'interest' ? this.interestAmount() : 0;
+      const principal = amount - interest;
       const balanceAfter = Math.max(0, loan.current_balance - principal);
-      const newPaidInstallments = loan.type === 'fixed' ? loan.paid_installments + 1 : loan.paid_installments;
+      
+      const installmentNum = loan.paid_installments + 1;
+      const remainingInstallments = (loan.total_installments || 0) - installmentNum;
+      
+      const newPaidInstallments = loan.type === 'fixed' ? installmentNum : loan.paid_installments;
       const newStatus: SupabaseLoan['status'] = balanceAfter <= 0 ? 'paid' :
         (loan.type === 'fixed' && newPaidInstallments >= (loan.total_installments ?? 0)) ? 'paid' : 'active';
 
-      // Create payment record
+      // 1. Processar Ajustes no Cronograma se houver diferença (apenas FIXO)
+      let finalInstallmentAmount = loan.installment_amount;
+      const adjType = this.adjustmentType();
+
+      if (hasDifference && remainingInstallments > 0) {
+        if (adjType === 'redistribute') {
+          // Nova parcela = saldo restante / parcelas restantes
+          finalInstallmentAmount = parseFloat((balanceAfter / remainingInstallments).toFixed(2));
+          await this.supabase.updateFutureFixedInstallments(loan.id, installmentNum + 1, finalInstallmentAmount);
+        } else if (adjType === 'next') {
+          await this.supabase.adjustSpecificInstallment(loan.id, installmentNum + 1, difference);
+        } else if (adjType === 'last') {
+          await this.supabase.adjustSpecificInstallment(loan.id, loan.total_installments!, difference);
+        }
+      }
+
+      // 2. Vincular ou criar Transação no Extrato
+      const { data: existingTx } = await this.supabase.getLoanTransaction(loan.id, installmentNum);
+
+      if (existingTx && existingTx.status === 'pending') {
+        await this.supabase.updateTransaction(existingTx.id, {
+          status: 'confirmed',
+          account_id: accountId,
+          amount: amount,
+          date: new Date().toLocaleDateString('en-CA')
+        });
+      } else {
+        await this.supabase.createTransaction({
+          account_id: accountId,
+          description: `Pagamento ${loan.type === 'fixed' ? 'Parcela ' + installmentNum : 'Empréstimo'} - ${loan.creditor_name}`,
+          amount: amount,
+          date: new Date().toLocaleDateString('en-CA'),
+          category: 'Empréstimo',
+          type: 'expense',
+          status: 'confirmed',
+          loan_id: loan.id,
+          installment_number: installmentNum
+        });
+      }
+
+      // 3. Atualizar Saldo da Conta
+      const account = this.accounts().find(a => a.id === accountId);
+      if (account) {
+        const newAccountBalance = parseFloat((account.initial_balance - amount).toFixed(2));
+        await this.supabase.updateAccount(accountId, { initial_balance: newAccountBalance });
+      }
+
+      // 4. Criar registro histórico de pagamento com rastreabilidade
       await this.supabase.createLoanPayment({
         loan_id: loan.id,
-        account_id: this.paymentAccountId || undefined,
+        account_id: accountId,
         payment_date: new Date().toLocaleDateString('en-CA'),
         amount_paid: amount,
-        interest_portion: loan.type === 'interest' ? interest : 0,
+        interest_portion: interest,
         principal_portion: principal,
-        installment_number: loan.type === 'fixed' ? newPaidInstallments : undefined,
+        installment_number: installmentNum,
         balance_before: loan.current_balance,
         balance_after: balanceAfter,
+        adjustment_type: hasDifference ? adjType : 'none',
+        adjustment_value: hasDifference ? difference : 0
       });
 
-      // Update loan
+      // 5. Atualizar o contrato do empréstimo
       const { data: updatedLoan } = await this.supabase.updateLoan(loan.id, {
         current_balance: balanceAfter,
         total_paid: loan.total_paid + amount,
         paid_installments: newPaidInstallments,
+        installment_amount: finalInstallmentAmount,
         status: newStatus,
       });
 
@@ -638,16 +973,132 @@ export class LoansPageComponent implements OnInit {
           list.map(l => l.id === loan.id ? updatedLoan as SupabaseLoan : l)
         );
       }
+      
+      await this.loadAccounts();
       this.loanForPayment.set(null);
+    } catch (err) {
+      console.error('Erro ao processar pagamento:', err);
     } finally {
       this.isSaving.set(false);
     }
   }
 
   async deleteLoan(loan: SupabaseLoan) {
-    this.activeMenuId.set(null);
-    await this.supabase.deleteLoan(loan.id);
-    this.loans.update(list => list.filter(l => l.id !== loan.id));
+    this.loanToDelete.set(loan);
+    this.showDeleteConfirmModal.set(true);
+    this.closeActionModal();
+  }
+
+  async confirmDelete() {
+    const loan = this.loanToDelete();
+    if (!loan) return;
+    
+    this.isSaving.set(true);
+    try {
+      await this.supabase.deleteLoan(loan.id);
+      this.loans.update(list => list.filter(l => l.id !== loan.id));
+      this.showDeleteConfirmModal.set(false);
+      this.loanToDelete.set(null);
+    } finally {
+      this.isSaving.set(false);
+    }
+  }
+
+  async openInstallmentsModal(loan: SupabaseLoan) {
+    this.selectedLoanForInstallments.set(loan);
+    this.showInstallmentsModal.set(true);
+    this.closeActionModal();
+    await this.fetchInstallmentTransactions(loan.id);
+  }
+
+  async fetchInstallmentTransactions(loanId: string) {
+    const { data } = await this.supabase.client
+      .from('transactions')
+      .select('*')
+      .eq('loan_id', loanId)
+      .order('installment_number', { ascending: true })
+      .order('date', { ascending: true });
+    
+    if (data) {
+      this.installmentTransactions.set(data as SupabaseTransaction[]);
+    }
+  }
+
+  startEditInstallment(tx: SupabaseTransaction) {
+    this.isEditingInstallmentId.set(tx.id);
+    this.editingAmount.set(tx.amount);
+  }
+
+  async saveInstallmentAmount(tx: SupabaseTransaction) {
+    if (this.isSaving()) return;
+    
+    const originalAmount = tx.amount;
+    const newAmount = this.editingAmount();
+    const difference = parseFloat((originalAmount - newAmount).toFixed(2));
+    const hasDifference = Math.abs(difference) > 0.01;
+    const adjType = this.adjustmentTypeForList();
+
+    this.isSaving.set(true);
+    try {
+      // 1. Aplicar Ajustes se houver diferença
+      if (hasDifference) {
+        const loanId = tx.loan_id!;
+        const currentNum = tx.installment_number!;
+        const loan = this.selectedLoanForInstallments();
+        const totalNum = loan?.total_installments || 0;
+        const remaining = totalNum - currentNum;
+
+        if (adjType === 'redistribute' && remaining > 0) {
+          const extraPerParcel = parseFloat((difference / remaining).toFixed(2));
+          // Pegamos o valor atual de uma parcela futura para somar
+          const { data: futureTxs } = await this.supabase.client.from('transactions')
+            .select('amount')
+            .eq('loan_id', loanId)
+            .eq('status', 'pending')
+            .gt('installment_number', currentNum);
+          
+          if (futureTxs && futureTxs.length > 0) {
+            const baseFutureAmount = Number(futureTxs[0].amount);
+            await this.supabase.updateFutureFixedInstallments(loanId, currentNum + 1, baseFutureAmount + extraPerParcel);
+          }
+        } 
+        else if (adjType === 'next' && remaining > 0) {
+          await this.supabase.adjustSpecificInstallment(loanId, currentNum + 1, difference);
+        }
+        else if (adjType === 'last' && remaining > 0) {
+          await this.supabase.adjustSpecificInstallment(loanId, totalNum, difference);
+        }
+        else if (adjType === 'new_last' && difference > 0) {
+          await this.supabase.addExtraInstallment(loanId, difference);
+        }
+      }
+
+      // 2. Salvar a transação atual
+      const { data: updatedTx, error } = await this.supabase.updateTransaction(tx.id, {
+        amount: newAmount
+      });
+
+      if (updatedTx && !error) {
+        this.isEditingInstallmentId.set(null);
+        
+        // 3. Recarregar lista e sincronizar contrato
+        await this.fetchInstallmentTransactions(tx.loan_id!);
+        const { data: updatedLoan } = await this.supabase.syncLoanData(tx.loan_id!);
+        
+        if (updatedLoan) {
+          this.loans.update(list =>
+            list.map(l => l.id === tx.loan_id ? updatedLoan as SupabaseLoan : l)
+          );
+          this.selectedLoanForInstallments.set(updatedLoan as SupabaseLoan);
+        }
+      }
+    } finally {
+      this.isSaving.set(false);
+    }
+  }
+
+  cancelEditInstallment() {
+    this.isEditingInstallmentId.set(null);
   }
 
   getMinPayment(loan: SupabaseLoan): number {
@@ -685,6 +1136,7 @@ export class LoansPageComponent implements OnInit {
       total_installments: null,
       due_day: null,
       start_date: new Date().toLocaleDateString('en-CA'),
+      account_id: '',
     };
   }
 }

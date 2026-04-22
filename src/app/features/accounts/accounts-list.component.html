@@ -145,7 +145,7 @@
                     <div>
                         <p class="text-[10px] font-black uppercase tracking-[0.2em] text-white/50 mb-1">Visa Platinum
                         </p>
-                        <h4 class="text-xl font-bold">{{ card.institution_name }}</h4>
+                        <h4 class="text-xl font-bold">{{ card.card_name || card.institution_name }}</h4>
                     </div>
                     <!-- Wireless Icon -->
                     <mat-icon class="rotate-90 text-white/60">settings_input_antenna</mat-icon>
@@ -156,17 +156,19 @@
                     <div
                         class="w-10 h-7 rounded bg-gradient-to-br from-gray-300 to-gray-500 mb-4 opacity-80 border border-white/20">
                     </div>
-                    <p class="text-xl tracking-[0.3em] font-medium text-white/90">•••• •••• •••• 4281</p>
+                    <p class="text-xl tracking-[0.3em] font-medium text-white/90">
+                        {{ card.card_number ? '•••• •••• •••• ' + card.card_number.slice(-4) : '•••• •••• •••• ••••' }}
+                    </p>
                 </div>
 
                 <div class="relative z-10 flex justify-between items-end">
                     <div>
                         <p class="text-[9px] font-bold uppercase tracking-widest text-white/40 mb-1">Limite Disponível
                         </p>
-                        <p class="text-xl font-black text-[#00C897]">{{ card.initial_balance |
+                        <p class="text-xl font-black text-[#00C897]">{{ ((card.credit_limit || 0) - (card.initial_balance || 0)) |
                             currency:'BRL':'symbol':'1.2-2' }}</p>
                     </div>
-                    <p class="text-[11px] font-bold text-white/50">09/28</p>
+                    <p class="text-[11px] font-bold text-white/50">{{ card.card_expiration || '••/••' }}</p>
                 </div>
             </div>
             }

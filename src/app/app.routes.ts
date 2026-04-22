@@ -23,6 +23,7 @@ import { DataManagementComponent } from './features/data-management/data-managem
 import { SubscriptionPageComponent } from './features/subscription/subscription-page.component';
 import { SubscriptionCheckoutComponent } from './features/subscription/subscription-checkout.component';
 import { SubscriptionStatusComponent } from './features/subscription/subscription-status.component';
+import { AllCardTransactionsComponent } from './features/credit-cards/all-card-transactions.component';
 import { TransfersComponent } from './features/transactions/transfers.component';
 import { AllTransfersComponent } from './features/transactions/all-transfers.component';
 import { ImportacaoPageComponent } from './features/import/importacao-page.component';
@@ -136,6 +137,11 @@ export const routes: Routes = [
     path: 'all-transfers',
     component: AllTransfersComponent,
     data: { title: 'Todas as Transferências', pageId: PageId.ALL_TRANSFERS }
+  },
+  {
+    path: 'all-card-transactions',
+    component: AllCardTransactionsComponent,
+    data: { title: 'Histórico de Cartões', pageId: PageId.ALL_CARD_TRANSACTIONS }
   },
   {
     path: 'lancamentos',

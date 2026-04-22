@@ -578,7 +578,10 @@ export class RecurringTransactionsComponent implements OnInit {
 
   private async loadAccounts() {
     const { data } = await this.supabase.getAccounts();
-    this.accounts.set(data || []);
+    // Lista apenas contas bancárias (corrente e poupança), excluindo cartões
+    this.accounts.set((data || []).filter((a: any) => 
+      a.account_type === 'checking' || a.account_type === 'savings'
+    ));
   }
 
   toggleAutoGenerate(value: boolean) {

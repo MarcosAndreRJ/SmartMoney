@@ -1,15 +1,17 @@
-import { Component, OnInit, inject, signal, computed, Input } from '@angular/core';
+import { Component, OnInit, inject, signal, computed, effect, Input } from '@angular/core';
+import { DeleteConfirmModalComponent } from '../../shared/components/delete-confirm-modal.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { SupabaseService } from '../../core/services/supabase.service';
 import { LoadingService } from '../../core/services/loading.service';
 import { NavigationService } from '../../core/services/navigation.service';
+import { ActivatedRoute } from '@angular/router';
 
 @Component({
   selector: 'app-subcategories-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule],
+  imports: [CommonModule, FormsModule, MatIconModule, DeleteConfirmModalComponent],
   template: `
   <div class="px-8 py-6 bg-[#F8FAFC] min-h-screen text-slate-900 font-sans premium-layer-v2">
     <!-- Debug Marker -->
@@ -123,6 +125,15 @@ import { NavigationService } from '../../core/services/navigation.service';
         <p class="text-slate-400 font-bold text-xs uppercase tracking-widest group-hover:text-slate-900">Nova Subcategoria</p>
       </button>
     </div>
+
+    @if (showDeleteConfirm()) {
+      <app-delete-confirm-modal
+        title="Excluir Subcategoria"
+        message="Deseja realmente excluir esta subcategoria? Esta ação não poderá ser desfeita."
+        (confirm)="confirmDeleteSub()"
+        (cancel)="cancelDeleteSub()">
+      </app-delete-confirm-modal>
+    }
   </div>
   `,
   styles: [`
@@ -135,6 +146,7 @@ export class SubcategoriesPageComponent implements OnInit {
   private supabase = inject(SupabaseService);
   private loadingService = inject(LoadingService);
   private navigationService = inject(NavigationService);
+  private route = inject(ActivatedRoute);
 
   @Input() initialParentId: string | null = null;
 
@@ -147,6 +159,10 @@ export class SubcategoriesPageComponent implements OnInit {
     return this.subcategories().reduce((acc, sub) => acc + (sub.monthly_spending || 0), 0);
   });
 
+  // Deletion state
+  showDeleteConfirm = signal(false);
+  subToDeleteId = signal<string | null>(null);
+
   budgetPercentage = computed(() => {
     const total = this.totalSpending();
     const budget = this.budgetLimit();
@@ -154,22 +170,33 @@ export class SubcategoriesPageComponent implements OnInit {
     return Math.min(Math.round((total / budget) * 100), 100);
   });
 
+  private isInitialized = false;
+
   constructor() {
-    console.log('--- SubcategoriesPageComponent V2 Loaded ---');
+    // React to navigation signal changes (safe injection context)
+    // The guard prevents a redundant second load during initial ngOnInit
+    effect(() => {
+      const navId = this.navigationService.selectedCategoryId();
+      if (navId && this.isInitialized) {
+        this.loadData(navId);
+      }
+    });
   }
 
   async ngOnInit() {
-    console.log('SubcategoriesPage ngOnInit - initialParentId:', this.initialParentId);
     await this.loadData();
+    this.isInitialized = true;
   }
 
-  async loadData() {
+  async loadData(parentId?: string | null) {
     this.loadingService.show();
     try {
-      const parentId = this.initialParentId;
-      console.log('Loading subcategories for parentId:', parentId);
-      if (!parentId) {
-        console.warn('No initialParentId provided to SubcategoriesPageComponent');
+      // Priority: explicit arg > URL queryParam > Input > NavigationService signal
+      const qp = this.route.snapshot.queryParamMap.get('categoryId');
+      let id = parentId ?? qp ?? this.initialParentId ?? this.navigationService.selectedCategoryId() ?? null;
+
+      if (!id) {
+        console.warn('SubcategoriesPage: parentId not found via Input, NavigationService or queryParam');
         return;
       }
 
@@ -177,7 +204,7 @@ export class SubcategoriesPageComponent implements OnInit {
       const { data: parent, error: pError } = await this.supabase.client
         .from('categories')
         .select('*')
-        .eq('id', parentId)
+        .eq('id', id)
         .single();
 
       if (pError) throw pError;
@@ -188,7 +215,7 @@ export class SubcategoriesPageComponent implements OnInit {
       const { data: subs, error: subError } = await this.supabase.client
         .from('categories')
         .select('*')
-        .eq('parent_id', parentId);
+        .eq('parent_id', id);
 
       if (subError) throw subError;
       this.subcategories.set(subs || []);
@@ -204,18 +231,29 @@ export class SubcategoriesPageComponent implements OnInit {
   }
 
   openSidebar() {
-    this.navigationService.navigateTo('subcategory-form', { categoryId: this.initialParentId! });
+    const categoryId = this.currentParent()?.id ?? this.initialParentId ?? this.navigationService.selectedCategoryId();
+    this.navigationService.navigateTo('subcategory-form', { categoryId: categoryId! });
   }
 
   openEdit(sub: any) {
+    const categoryId = this.currentParent()?.id ?? this.initialParentId ?? this.navigationService.selectedCategoryId();
     this.navigationService.navigateTo('subcategory-form', { 
-      categoryId: this.initialParentId!, 
+      categoryId: categoryId!, 
       subcategoryId: sub.id 
     });
   }
 
-  async deleteSub(id: string) {
-    if (confirm('Deseja realmente excluir esta subcategoria?')) {
+  deleteSub(id: string) {
+    this.subToDeleteId.set(id);
+    this.showDeleteConfirm.set(true);
+  }
+
+  async confirmDeleteSub() {
+    const id = this.subToDeleteId();
+    if (!id) return;
+
+    this.loadingService.show('Removendo...');
+    try {
       const { error } = await this.supabase.client
         .from('categories')
         .delete()
@@ -224,6 +262,14 @@ export class SubcategoriesPageComponent implements OnInit {
       if (!error) {
         this.subcategories.update(subs => subs.filter(s => s.id !== id));
       }
+    } finally {
+      this.loadingService.hide();
+      this.cancelDeleteSub();
     }
+  }
+
+  cancelDeleteSub() {
+    this.showDeleteConfirm.set(false);
+    this.subToDeleteId.set(null);
   }
 }

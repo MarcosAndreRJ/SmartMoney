@@ -1,4 +1,5 @@
 import { Component, OnInit, inject, signal, computed, Output, EventEmitter } from '@angular/core';
+import { DeleteConfirmModalComponent } from '../../shared/components/delete-confirm-modal.component';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
@@ -10,7 +11,7 @@ import { NavigationService } from '../../core/services/navigation.service';
 @Component({
   selector: 'app-categories-page',
   standalone: true,
-  imports: [CommonModule, FormsModule, MatIconModule],
+  imports: [CommonModule, FormsModule, MatIconModule, DeleteConfirmModalComponent],
   template: `
     <div class="p-8 bg-[#F8FAFC] min-h-screen text-slate-900">
       <!-- Header Area -->
@@ -227,6 +228,15 @@ import { NavigationService } from '../../core/services/navigation.service';
           <div class="fixed inset-0 bg-slate-900/10 backdrop-blur-[2px] z-[90]" (click)="closeSidebar()"></div>
         }
       </div>
+
+      @if (showDeleteConfirm()) {
+        <app-delete-confirm-modal
+          title="Excluir Categoria"
+          message="Deseja realmente excluir esta categoria? Todas as subcategorias vinculadas também poderão ser afetadas."
+          (confirm)="confirmDeleteCategory()"
+          (cancel)="cancelDeleteCategory()">
+        </app-delete-confirm-modal>
+      }
     </div>
   `
 })
@@ -247,6 +257,10 @@ export class CategoriesPageComponent implements OnInit {
   formIcon = signal('category');
   formColor = signal('#10B981');
   editingCategoryId = signal<string | null>(null);
+  
+  // Deletion state
+  showDeleteConfirm = signal(false);
+  categoryToDeleteId = signal<string | null>(null);
 
   filteredCategories = computed(() =>
     this.categories().filter(c => c.type === this.activeTab())
@@ -361,17 +375,29 @@ export class CategoriesPageComponent implements OnInit {
     }
   }
 
-  async deleteCategory(id: string) {
-    if (confirm('Deseja realmente excluir esta categoria?')) {
-      this.loadingSrv.show('Removendo...');
-      try {
-        const { error } = await this.supabase.deleteCategory(id);
-        if (!error) {
-          await this.loadCategories();
-        }
-      } finally {
-        this.loadingSrv.hide();
+  deleteCategory(id: string) {
+    this.categoryToDeleteId.set(id);
+    this.showDeleteConfirm.set(true);
+  }
+
+  async confirmDeleteCategory() {
+    const id = this.categoryToDeleteId();
+    if (!id) return;
+
+    this.loadingSrv.show('Removendo...');
+    try {
+      const { error } = await this.supabase.deleteCategory(id);
+      if (!error) {
+        await this.loadCategories();
       }
+    } finally {
+      this.loadingSrv.hide();
+      this.cancelDeleteCategory();
     }
+  }
+
+  cancelDeleteCategory() {
+    this.showDeleteConfirm.set(false);
+    this.categoryToDeleteId.set(null);
   }
 }
