@@ -4,6 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatIconModule } from '@angular/material/icon';
 import { SupabaseService, SupabaseTransaction, SupabaseAccount } from '../../core/services/supabase.service';
 import { TransactionFormComponent } from './transaction-form.component';
+import * as XLSX from 'xlsx';
 
 interface TransactionGroup {
   label: string;
@@ -136,7 +137,7 @@ type TxTypeFilter = 'all' | 'income' | 'expense' | 'transfer';
           <div class="flex-1 hidden md:block"></div>
 
           <!-- Export -->
-          <button (click)="exportCsv()" class="h-11 px-4 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm whitespace-nowrap w-full md:w-auto justify-center">
+          <button (click)="showExportModal.set(true)" class="h-11 px-4 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm whitespace-nowrap w-full md:w-auto justify-center">
             <mat-icon class="text-[18px] text-slate-400">download</mat-icon>
             Exportar
           </button>
@@ -198,8 +199,14 @@ type TxTypeFilter = 'all' | 'income' | 'expense' | 'transfer';
             }
           </div>
 
-          <!-- Results count -->
-          <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ filteredTransactions().length }} resultado{{ filteredTransactions().length !== 1 ? 's' : '' }} encontrado{{ filteredTransactions().length !== 1 ? 's' : '' }}</span>
+          <!-- Results count and Sort -->
+          <div class="flex items-center gap-4">
+            <button (click)="toggleSort()" class="flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-slate-50 text-slate-500 transition-all border border-transparent hover:border-slate-200 group">
+              <mat-icon class="text-[16px] transition-transform" [class.rotate-180]="sortOrder() === 'asc'">sort</mat-icon>
+              <span class="text-[10px] font-black uppercase tracking-widest">{{ sortOrder() === 'desc' ? 'Mais Recentes' : 'Mais Antigas' }}</span>
+            </button>
+            <span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">{{ filteredTransactions().length }} resultado{{ filteredTransactions().length !== 1 ? 's' : '' }} encontrado{{ filteredTransactions().length !== 1 ? 's' : '' }}</span>
+          </div>
         </div>
       </div>
 
@@ -573,6 +580,76 @@ type TxTypeFilter = 'all' | 'income' | 'expense' | 'transfer';
         </div>
       }
 
+      <!-- Export Modal -->
+      @if (showExportModal()) {
+        <div class="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div class="bg-white rounded-[24px] w-full max-w-[400px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <!-- Modal Header -->
+            <div class="p-6 pb-4 relative">
+              <h2 class="text-xl font-black text-slate-800">Exportar Transações</h2>
+              <p class="text-xs font-medium text-slate-500 mt-1">Escolha o formato do arquivo para download</p>
+              
+              <button (click)="showExportModal.set(false)" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors">
+                <mat-icon class="text-[20px]">close</mat-icon>
+              </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="px-6 py-4 space-y-4">
+              <!-- Format Selection -->
+              <div class="grid grid-cols-1 gap-3">
+                <button 
+                  (click)="exportFormat.set('csv')"
+                  [class.border-emerald-500]="exportFormat() === 'csv'"
+                  [class.bg-emerald-50]="exportFormat() === 'csv'"
+                  class="flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-100 transition-all text-left group">
+                  <div class="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center group-hover:bg-emerald-500 group-hover:text-white transition-colors">
+                    <mat-icon>description</mat-icon>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-bold text-slate-800">CSV (Padrão)</p>
+                    <p class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Separado por ponto e vírgula</p>
+                  </div>
+                  @if (exportFormat() === 'csv') {
+                    <mat-icon class="text-emerald-500">check_circle</mat-icon>
+                  }
+                </button>
+
+                <button 
+                  (click)="exportFormat.set('xlsx')"
+                  [class.border-emerald-500]="exportFormat() === 'xlsx'"
+                  [class.bg-emerald-50]="exportFormat() === 'xlsx'"
+                  class="flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-100 transition-all text-left group">
+                  <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                    <mat-icon>table_view</mat-icon>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-bold text-slate-800">Excel (XLSX)</p>
+                    <p class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Planilha formatada para Excel</p>
+                  </div>
+                  @if (exportFormat() === 'xlsx') {
+                    <mat-icon class="text-emerald-500">check_circle</mat-icon>
+                  }
+                </button>
+              </div>
+            </div>
+
+            <!-- Modal Actions -->
+            <div class="p-6 flex items-center gap-3">
+              <button (click)="showExportModal.set(false)" 
+                class="flex-1 h-12 bg-slate-100 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-200 transition-colors">
+                Cancelar
+              </button>
+              <button (click)="executeExport()" 
+                class="flex-[1.5] h-12 bg-[#0F172A] hover:bg-slate-800 text-white rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2">
+                <mat-icon class="text-lg">download</mat-icon>
+                Baixar Arquivo
+              </button>
+            </div>
+          </div>
+        </div>
+      }
+
       <!-- New Transaction Form Sidebar -->
       @if (showTransactionForm()) {
         <app-transaction-form 
@@ -596,6 +673,7 @@ export class TransactionsPageComponent implements OnInit {
   typeFilter = signal<TxTypeFilter>('all');
   statusFilter = signal<'all' | 'confirmed' | 'pending' | 'cancelled'>('all');
   currentMonthNav = signal<Date>(new Date(new Date().getFullYear(), new Date().getMonth(), 1));
+  sortOrder = signal<'asc' | 'desc'>('desc');
 
   // Modal State
   showCustomFilterModal = signal(false);
@@ -605,6 +683,10 @@ export class TransactionsPageComponent implements OnInit {
   customTypes = signal({ income: false, expense: false, transfer: false, goal: false, investment: false });
   customStatuses = signal({ confirmed: false, pending: false, cancelled: false });
   appliedCustomFilters = signal<any>(null);
+
+  // Export Modal State
+  showExportModal = signal(false);
+  exportFormat = signal<'csv' | 'xlsx'>('csv');
 
   customFilterBadges = computed(() => {
     const custom = this.appliedCustomFilters();
@@ -748,8 +830,11 @@ export class TransactionsPageComponent implements OnInit {
       if (!groups.has(key)) groups.set(key, []);
       groups.get(key)!.push(tx);
     }
+    
+    const sort = this.sortOrder();
+    
     return Array.from(groups.entries())
-      .sort((a, b) => b[0].localeCompare(a[0]))
+      .sort((a, b) => sort === 'desc' ? b[0].localeCompare(a[0]) : a[0].localeCompare(b[0]))
       .map(([key, txList]) => {
         const date = new Date(key + 'T12:00:00');
         const total = txList.reduce((sum, t) => t.type === 'expense' ? sum - t.amount : sum + t.amount, 0);
@@ -1017,6 +1102,7 @@ export class TransactionsPageComponent implements OnInit {
   }
   setType(t: TxTypeFilter) { this.typeFilter.set(t); }
   setStatus(s: 'all' | 'confirmed' | 'pending' | 'cancelled') { this.statusFilter.set(s); }
+  toggleSort() { this.sortOrder.update(s => s === 'desc' ? 'asc' : 'desc'); }
 
   openCustomFilterModal() {
     this.showCustomFilterModal.set(true);
@@ -1058,9 +1144,20 @@ export class TransactionsPageComponent implements OnInit {
     return this.accountMap().get(accountId) || '';
   }
 
-  exportCsv() {
+  executeExport() {
+    const format = this.exportFormat();
     const txs = this.filteredTransactions();
     if (!txs.length) return;
+
+    if (format === 'csv') {
+      this.downloadCsv(txs);
+    } else {
+      this.downloadXlsx(txs);
+    }
+    this.showExportModal.set(false);
+  }
+
+  private downloadCsv(txs: any[]) {
     const headers = ['Data', 'Descricao', 'Categoria', 'Conta', 'Tipo', 'Valor (BRL)'];
     const rows = txs.map(tx => [
       (tx.date || '').split('T')[0],
@@ -1078,6 +1175,22 @@ export class TransactionsPageComponent implements OnInit {
     link.download = `transacoes_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  private downloadXlsx(txs: any[]) {
+    const data = txs.map(tx => ({
+      'Data': (tx.date || '').split('T')[0],
+      'Descrição': tx.description,
+      'Categoria': tx.category || tx.type,
+      'Conta': this.getAccountName(tx.account_id) || '',
+      'Tipo': tx.type === 'expense' ? 'Despesa' : tx.type === 'income' ? 'Receita' : 'Transferência',
+      'Valor (BRL)': tx.type === 'expense' ? -tx.amount : tx.amount
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Transações');
+    XLSX.writeFile(wb, `transacoes_${new Date().toISOString().split('T')[0]}.xlsx`);
   }
 
   private formatDateLabel(date: Date): string {

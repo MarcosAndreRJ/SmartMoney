@@ -27,6 +27,7 @@ import { AllCardTransactionsComponent } from './features/credit-cards/all-card-t
 import { TransfersComponent } from './features/transactions/transfers.component';
 import { AllTransfersComponent } from './features/transactions/all-transfers.component';
 import { ImportacaoPageComponent } from './features/import/importacao-page.component';
+import { ForecastPageComponent } from './features/forecast/forecast-page.component';
 
 // Admin components
 import { AdminDashboardComponent } from './features/admin/admin-dashboard/admin-dashboard.component';
@@ -152,6 +153,11 @@ export const routes: Routes = [
     path: 'importacao',
     component: ImportacaoPageComponent,
     data: { title: 'Importar Planilha', pageId: PageId.IMPORTACAO }
+  },
+  {
+    path: 'forecast',
+    component: ForecastPageComponent,
+    data: { title: 'Previsibilidade', pageId: PageId.FORECAST }
   },
   {
     path: 'subscription-checkout',

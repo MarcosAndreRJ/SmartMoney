@@ -3,7 +3,7 @@ import { SupabaseService } from './supabase.service';
 
 export interface RecurringSettings {
   autoGenerateOnOpen: boolean;
-  generationHorizonDays: 30 | 60 | 90;
+  generationHorizonDays: 30 | 60 | 90 | 180;
 }
 
 // Determines the next due date after a given date, based on frequency
@@ -161,13 +161,18 @@ export class RecurringSchedulerService {
         // Use account from the recurring record itself, or fallback to first account
         const accountId = rec.account_id || null;
 
+        // Calculate installment number if applicable
+        const description = rec.recurrence_type === 'installment' && rec.installments_total
+          ? `${rec.name} (${(rec.installments_paid ?? 0) + 1}/${rec.installments_total})`
+          : rec.name;
+
         // Create the transaction in Lançamentos
         const { error: insertError } = await this.supabase.client
           .from('transactions')
           .insert({
             user_id: userId,
             account_id: accountId,
-            description: rec.name,
+            description: description,
             amount: rec.amount,
             date: dueDateStr,
             category: rec.category,

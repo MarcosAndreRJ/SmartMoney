@@ -124,7 +124,7 @@ type GoalTab = 'Ativas' | 'Concluídas' | 'Suspensas';
                 <div class="w-14 h-14 rounded-2xl flex items-center justify-center text-white shadow-lg" [style.backgroundColor]="goal.color" [style.shadowColor]="goal.color">
                   <mat-icon class="text-2xl">{{ goal.icon }}</mat-icon>
                 </div>
-                <button [matMenuTriggerFor]="menu" [matMenuTriggerData]="{goal: goal}" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors">
+                <button [matMenuTriggerFor]="menu" [matMenuTriggerData]="{$implicit: goal}" class="w-8 h-8 rounded-full flex items-center justify-center text-slate-400 hover:bg-slate-50 hover:text-slate-600 transition-colors">
                   <mat-icon>more_vert</mat-icon>
                 </button>
               </div>
@@ -246,7 +246,7 @@ type GoalTab = 'Ativas' | 'Concluídas' | 'Suspensas';
       }
 
       <mat-menu #menu="matMenu" panelClass="bg-white rounded-2xl border border-slate-100 shadow-xl shadow-slate-200/50 min-w-[180px]">
-        <ng-template matMenuContent let-goal="goal">
+        <ng-template matMenuContent let-goal>
           <button mat-menu-item (click)="openDetails(goal)">
             <mat-icon class="text-slate-400">visibility</mat-icon>
             <span class="text-slate-600 font-medium">Ver Detalhes</span>

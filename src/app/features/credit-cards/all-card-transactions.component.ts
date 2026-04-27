@@ -7,6 +7,7 @@ import { SupabaseService, SupabaseCardTransaction, SupabaseAccount } from '../..
 import { NavigationService } from '../../core/services/navigation.service';
 import { PrivacyService } from '../../core/services/privacy.service';
 import { ToastService } from '../../shared/services/toast.service';
+import * as XLSX from 'xlsx';
 
 @Component({
   selector: 'app-all-card-transactions',
@@ -65,7 +66,7 @@ import { ToastService } from '../../shared/services/toast.service';
               </div>
             </div>
 
-            <button (click)="exportCsv()" class="h-10 px-4 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm whitespace-nowrap">
+            <button (click)="showExportModal.set(true)" class="h-10 px-4 rounded-xl text-xs font-bold border border-slate-200 bg-white text-slate-700 hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm whitespace-nowrap">
               <mat-icon class="text-[18px] text-slate-400">download</mat-icon>
               Exportar
             </button>
@@ -433,6 +434,76 @@ import { ToastService } from '../../shared/services/toast.service';
           (cancel)="cancelDelete()">
         </app-delete-confirm-modal>
       }
+
+      <!-- Export Modal -->
+      @if (showExportModal()) {
+        <div class="fixed inset-0 z-[140] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div class="bg-white rounded-[24px] w-full max-w-[400px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <!-- Modal Header -->
+            <div class="p-6 pb-4 relative">
+              <h2 class="text-xl font-black text-slate-800">Exportar Histórico</h2>
+              <p class="text-xs font-medium text-slate-500 mt-1">Escolha o formato do arquivo para download</p>
+              
+              <button (click)="showExportModal.set(false)" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors">
+                <mat-icon class="text-[20px]">close</mat-icon>
+              </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="px-6 py-4 space-y-4">
+              <!-- Format Selection -->
+              <div class="grid grid-cols-1 gap-3">
+                <button 
+                  (click)="exportFormat.set('csv')"
+                  [class.border-indigo-500]="exportFormat() === 'csv'"
+                  [class.bg-indigo-50]="exportFormat() === 'csv'"
+                  class="flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-100 transition-all text-left group">
+                  <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                    <mat-icon>description</mat-icon>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-bold text-slate-800">CSV (Padrão)</p>
+                    <p class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Separado por ponto e vírgula</p>
+                  </div>
+                  @if (exportFormat() === 'csv') {
+                    <mat-icon class="text-indigo-500">check_circle</mat-icon>
+                  }
+                </button>
+
+                <button 
+                  (click)="exportFormat.set('xlsx')"
+                  [class.border-indigo-500]="exportFormat() === 'xlsx'"
+                  [class.bg-indigo-50]="exportFormat() === 'xlsx'"
+                  class="flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-100 transition-all text-left group">
+                  <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                    <mat-icon>table_view</mat-icon>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-bold text-slate-800">Excel (XLSX)</p>
+                    <p class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Planilha formatada para Excel</p>
+                  </div>
+                  @if (exportFormat() === 'xlsx') {
+                    <mat-icon class="text-indigo-500">check_circle</mat-icon>
+                  }
+                </button>
+              </div>
+            </div>
+
+            <!-- Modal Actions -->
+            <div class="p-6 flex items-center gap-3">
+              <button (click)="showExportModal.set(false)" 
+                class="flex-1 h-12 bg-slate-100 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-200 transition-colors">
+                Cancelar
+              </button>
+              <button (click)="executeExport()" 
+                class="flex-[1.5] h-12 bg-[#0F172A] hover:bg-slate-800 text-white rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2">
+                <mat-icon class="text-lg">download</mat-icon>
+                Baixar Arquivo
+              </button>
+            </div>
+          </div>
+        </div>
+      }
     </div>
   `
 })
@@ -462,6 +533,10 @@ export class AllCardTransactionsComponent implements OnInit {
   customEndDate = signal<string>('');
   currentMonthNav = signal<Date>(new Date());
   sortDirection = signal<'asc' | 'desc'>('desc');
+
+  // Export Modal State
+  showExportModal = signal(false);
+  exportFormat = signal<'csv' | 'xlsx'>('csv');
 
   // Edit State
   showEditDrawer = signal(false);
@@ -687,10 +762,20 @@ export class AllCardTransactionsComponent implements OnInit {
     return `${months[nav.getMonth()]} ${nav.getFullYear()}`;
   }
 
-  exportCsv() {
+  executeExport() {
+    const format = this.exportFormat();
     const list = this.filteredTransactions();
     if (list.length === 0) return;
 
+    if (format === 'csv') {
+      this.downloadCsv(list);
+    } else {
+      this.downloadXlsx(list);
+    }
+    this.showExportModal.set(false);
+  }
+
+  private downloadCsv(list: SupabaseCardTransaction[]) {
     const headers = ['Data', 'Descricao', 'Cartao', 'Categoria', 'Status', 'Valor'];
     const rows = list.map(tx => [
       tx.date,
@@ -701,7 +786,7 @@ export class AllCardTransactionsComponent implements OnInit {
       tx.amount
     ]);
 
-    const csvContent = [headers, ...rows].map(r => r.join(';')).join('\n');
+    const csvContent = ['\uFEFF' + headers.join(';'), ...rows.map(r => r.join(';'))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
@@ -711,6 +796,23 @@ export class AllCardTransactionsComponent implements OnInit {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  private downloadXlsx(list: SupabaseCardTransaction[]) {
+    const data = list.map(tx => ({
+      'Data': tx.date,
+      'Descrição': tx.description,
+      'Cartão': this.getCardName(tx.card_id),
+      'Categoria': tx.category || 'Outros',
+      'Status': tx.status === 'confirmed' ? 'Confirmado' : 'Pendente',
+      'Valor (BRL)': tx.amount
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Histórico de Cartão');
+    XLSX.writeFile(wb, `historico_cartao_${new Date().toISOString().split('T')[0]}.xlsx`);
   }
 
   getCardName(cardId: string): string {

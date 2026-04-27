@@ -6,6 +6,7 @@ import { MatIconModule } from '@angular/material/icon';
 import { SupabaseService, SupabaseAccount, SupabaseTransaction, SupabaseCardTransaction } from '../../core/services/supabase.service';
 import { ToastService } from '../../shared/services/toast.service';
 import { NavigationService } from '../../core/services/navigation.service';
+import * as XLSX from 'xlsx';
 
 interface CardBill {
   card: SupabaseAccount;
@@ -41,13 +42,11 @@ interface CategorySummary {
           <p class="text-slate-500 mt-1 font-medium">Gerencie suas faturas e lançamentos.</p>
         </div>
         <div class="flex gap-3">
-          <button (click)="launchFullBill()" 
-                  [disabled]="!canLaunchBill() || isSaving()"
-                  [class.opacity-50]="!canLaunchBill()"
-                  [class.cursor-not-allowed]="!canLaunchBill()"
-                  class="px-5 py-3 bg-white border border-slate-200 text-slate-700 font-bold text-sm rounded-xl hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm">
-            <mat-icon class="text-[20px]">receipt_long</mat-icon>
-            Lançar Fatura
+          <button (click)="consolidateBills()" 
+                  [disabled]="isSaving()"
+                  class="px-5 py-3 bg-white border border-slate-200 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-50 transition-colors flex items-center gap-2 shadow-sm">
+            <mat-icon class="text-[20px]">sync</mat-icon>
+            Sincronizar Faturas
           </button>
           <button (click)="openDrawer()" class="px-5 py-3 bg-[#0F172A] text-white rounded-xl font-bold text-sm hover:bg-slate-800 transition-all shadow-lg flex items-center gap-2">
             <mat-icon class="text-lg">add_circle</mat-icon>
@@ -259,7 +258,7 @@ interface CategorySummary {
               <h3 class="text-lg font-black text-slate-800">Lançamentos Recentes</h3>
               <div class="flex gap-4 items-center">
                 <button (click)="navigateTo('all-card-transactions')" class="text-[10px] font-bold text-indigo-600 uppercase hover:underline">Ver Todos</button>
-                <button (click)="exportCsv()" class="px-4 h-10 rounded-xl text-sm font-bold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-2">
+                <button (click)="showExportModal.set(true)" class="px-4 h-10 rounded-xl text-sm font-bold border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 transition-colors flex items-center gap-2">
                   <mat-icon class="text-[18px]">download</mat-icon>
                   Exportar
                 </button>
@@ -578,16 +577,86 @@ interface CategorySummary {
       </div>
     }
 
-    @if (showDeleteConfirm()) {
-      <app-delete-confirm-modal
-        [title]="deleteType() === 'series' ? 'Excluir Série' : 'Confirmar Exclusão'"
-        [message]="deleteType() === 'series' 
-          ? 'Tem certeza que deseja excluir TODAS as parcelas desta série? Esta ação não poderá ser desfeita.' 
-          : 'Tem certeza que deseja excluir este lançamento? Esta ação não poderá ser desfeita.'"
-        (confirm)="executeDelete()"
-        (cancel)="cancelDelete()">
-      </app-delete-confirm-modal>
-    }
+      @if (showDeleteConfirm()) {
+        <app-delete-confirm-modal
+          [title]="deleteType() === 'series' ? 'Excluir Série' : 'Confirmar Exclusão'"
+          [message]="deleteType() === 'series' 
+            ? 'Tem certeza que deseja excluir TODAS as parcelas desta série? Esta ação não poderá ser desfeita.' 
+            : 'Tem certeza que deseja excluir este lançamento? Esta ação não poderá ser desfeita.'"
+          (confirm)="executeDelete()"
+          (cancel)="cancelDelete()">
+        </app-delete-confirm-modal>
+      }
+
+      <!-- Export Modal -->
+      @if (showExportModal()) {
+        <div class="fixed inset-0 z-[140] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-300">
+          <div class="bg-white rounded-[24px] w-full max-w-[400px] shadow-2xl overflow-hidden animate-in zoom-in-95 duration-300">
+            <!-- Modal Header -->
+            <div class="p-6 pb-4 relative">
+              <h2 class="text-xl font-black text-slate-800">Exportar Fatura</h2>
+              <p class="text-xs font-medium text-slate-500 mt-1">Escolha o formato do arquivo para download</p>
+              
+              <button (click)="showExportModal.set(false)" class="absolute top-6 right-6 text-slate-400 hover:text-slate-600 transition-colors">
+                <mat-icon class="text-[20px]">close</mat-icon>
+              </button>
+            </div>
+
+            <!-- Modal Content -->
+            <div class="px-6 py-4 space-y-4">
+              <!-- Format Selection -->
+              <div class="grid grid-cols-1 gap-3">
+                <button 
+                  (click)="exportFormat.set('csv')"
+                  [class.border-indigo-500]="exportFormat() === 'csv'"
+                  [class.bg-indigo-50]="exportFormat() === 'csv'"
+                  class="flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-100 transition-all text-left group">
+                  <div class="w-10 h-10 rounded-xl bg-indigo-100 text-indigo-600 flex items-center justify-center group-hover:bg-indigo-500 group-hover:text-white transition-colors">
+                    <mat-icon>description</mat-icon>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-bold text-slate-800">CSV (Padrão)</p>
+                    <p class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Separado por ponto e vírgula</p>
+                  </div>
+                  @if (exportFormat() === 'csv') {
+                    <mat-icon class="text-indigo-500">check_circle</mat-icon>
+                  }
+                </button>
+
+                <button 
+                  (click)="exportFormat.set('xlsx')"
+                  [class.border-indigo-500]="exportFormat() === 'xlsx'"
+                  [class.bg-indigo-50]="exportFormat() === 'xlsx'"
+                  class="flex items-center gap-4 p-4 rounded-2xl border-2 border-slate-100 transition-all text-left group">
+                  <div class="w-10 h-10 rounded-xl bg-blue-100 text-blue-600 flex items-center justify-center group-hover:bg-blue-500 group-hover:text-white transition-colors">
+                    <mat-icon>table_view</mat-icon>
+                  </div>
+                  <div class="flex-1">
+                    <p class="text-sm font-bold text-slate-800">Excel (XLSX)</p>
+                    <p class="text-[10px] text-slate-500 font-medium uppercase tracking-wider">Planilha formatada para Excel</p>
+                  </div>
+                  @if (exportFormat() === 'xlsx') {
+                    <mat-icon class="text-indigo-500">check_circle</mat-icon>
+                  }
+                </button>
+              </div>
+            </div>
+
+            <!-- Modal Actions -->
+            <div class="p-6 flex items-center gap-3">
+              <button (click)="showExportModal.set(false)" 
+                class="flex-1 h-12 bg-slate-100 text-slate-600 font-bold text-sm rounded-xl hover:bg-slate-200 transition-colors">
+                Cancelar
+              </button>
+              <button (click)="executeExport()" 
+                class="flex-[1.5] h-12 bg-[#0F172A] hover:bg-slate-800 text-white rounded-xl font-bold text-sm transition-colors flex items-center justify-center gap-2">
+                <mat-icon class="text-lg">download</mat-icon>
+                Baixar Arquivo
+              </button>
+            </div>
+          </div>
+        </div>
+      }
   `
 })
 export class CreditCardsPageComponent implements OnInit {
@@ -602,6 +671,10 @@ export class CreditCardsPageComponent implements OnInit {
   allCardTransactions = signal<SupabaseCardTransaction[]>([]);
   selectedCardId = signal<string>('');
   searchQuery = signal('');
+
+  // Export Modal State
+  showExportModal = signal(false);
+  exportFormat = signal<'csv' | 'xlsx'>('csv');
   
   // Deletion state
   showDeleteConfirm = signal(false);
@@ -880,61 +953,6 @@ export class CreditCardsPageComponent implements OnInit {
     }
   }
 
-  canLaunchBill = computed(() => {
-    const bill = this.selectedBill();
-    if (!bill || bill.currentBill <= 0) return false;
-    if (!this.isBestPeriodToBuy()) return false;
-
-    // Verificar se já existe um lançamento de pagamento este mês/ciclo
-    const hasPayment = this.allTransactions().some(tx =>
-      tx.description.includes('Pagamento Fatura') &&
-      tx.description.includes(bill.card.institution_name) &&
-      new Date(tx.date).getMonth() === new Date().getMonth()
-    );
-
-    return !hasPayment;
-  });
-
-  async launchFullBill() {
-    const bill = this.selectedBill();
-    if (!bill || !this.canLaunchBill()) return;
-
-    this.isSaving.set(true);
-    try {
-      const paymentAccount = this.getBillPaymentAccount();
-      if (!paymentAccount) {
-        this.toast.show('error', 'Conta não encontrada', 'Cadastre uma conta corrente para lançar o pagamento da fatura.');
-        return;
-      }
-
-      const now = new Date();
-      const monthYear = `${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
-
-      const newTx: Partial<SupabaseTransaction> = {
-        account_id: paymentAccount.id,
-        description: `Pagamento Fatura - ${bill.card.institution_name} - ${monthYear}`,
-        amount: bill.currentBill,
-        date: now.toLocaleDateString('en-CA'),
-        category: 'Pagamento',
-        type: 'expense',
-        status: 'pending'
-      };
-
-      const { error } = await this.supabase.createTransaction(newTx);
-
-      if (error) throw error;
-
-      this.toast.show('success', 'Sucesso', 'Fatura lançada com sucesso!');
-
-      await this.reloadData();
-
-    } catch (err) {
-      console.error(err);
-      this.toast.show('error', 'Erro', 'Erro ao lançar fatura.');
-    } finally {
-      this.isSaving.set(false);
-    }
-  }
 
   canPayBill = computed(() => {
     const bill = this.selectedBill();
@@ -1008,7 +1026,22 @@ export class CreditCardsPageComponent implements OnInit {
     }
   }
 
-  openDrawer() {
+  async consolidateBills() {
+    this.isSaving.set(true);
+    try {
+      this.toast.show('success', 'Sincronizando', 'Consolidando faturas e gerando lançamentos de previsão...');
+      await this.supabase.syncAllCardsBills();
+      this.toast.show('success', 'Sucesso', 'Faturas sincronizadas com sucesso!');
+      await this.reloadData();
+    } catch (err) {
+      console.error(err);
+      this.toast.show('error', 'Erro', 'Falha ao sincronizar faturas.');
+    } finally {
+      this.isSaving.set(false);
+    }
+  }
+
+  async openDrawer() {
     // Pre-fill cardId to currently selected card
     const current = this.selectedBill();
     if (current) this.launchForm.cardId = current.card.id;
@@ -1336,11 +1369,22 @@ export class CreditCardsPageComponent implements OnInit {
     }
   }
 
-  exportCsv() {
-    const txs = this.filteredTransactions();
-    if (txs.length === 0) return;
+  executeExport() {
+    const format = this.exportFormat();
+    const list = this.filteredTransactions();
+    if (list.length === 0) return;
+
+    if (format === 'csv') {
+      this.downloadCsv(list);
+    } else {
+      this.downloadXlsx(list);
+    }
+    this.showExportModal.set(false);
+  }
+
+  private downloadCsv(list: SupabaseCardTransaction[]) {
     const headers = ['Data', 'Descricao', 'Categoria', 'Valor (BRL)', 'Status'];
-    const rows = txs.map(tx => [
+    const rows = list.map(tx => [
       new Date(tx.date + 'T12:00:00').toLocaleDateString('pt-BR'),
       `"${tx.description}"`,
       tx.category || 'Outros',
@@ -1355,5 +1399,20 @@ export class CreditCardsPageComponent implements OnInit {
     link.download = `fatura_cartao_${new Date().toISOString().split('T')[0]}.csv`;
     link.click();
     URL.revokeObjectURL(url);
+  }
+
+  private downloadXlsx(list: SupabaseCardTransaction[]) {
+    const data = list.map(tx => ({
+      'Data': new Date(tx.date + 'T12:00:00').toLocaleDateString('pt-BR'),
+      'Descrição': tx.description,
+      'Categoria': tx.category || 'Outros',
+      'Valor (BRL)': tx.amount,
+      'Status': tx.status || 'confirmed'
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Fatura');
+    XLSX.writeFile(wb, `fatura_cartao_${new Date().toISOString().split('T')[0]}.xlsx`);
   }
 }

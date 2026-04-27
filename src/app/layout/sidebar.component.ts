@@ -92,6 +92,7 @@ export class SidebarComponent implements OnInit {
     { id: 'dashboard', icon: 'dashboard', label: 'Painel' },
     { id: 'accounts', icon: 'account_balance_wallet', label: 'Contas' },
     { id: 'credit-cards', icon: 'credit_card', label: 'Cartões' },
+    { id: 'forecast', icon: 'trending_up', label: 'Previsão', resource: 'forecast' },
     { id: 'transactions', icon: 'sync_alt', label: 'Transferências', resource: 'account_transfers' },
     { id: 'lancamentos', icon: 'receipt_long', label: 'Transações' },
     { id: 'categories', icon: 'category', label: 'Categorias' },
@@ -138,11 +139,12 @@ export class SidebarComponent implements OnInit {
    * 4. Adicione campo 'resource' nos NavItem que precisam de controle
    *    (ex: { id: 'goals', icon: 'flag', label: 'Metas', resource: 'goals' })
    * ================================================================ */
+  /* 
   filteredNavItems = computed(() => {
     const sub = this.userSubscription();
     if (!sub || !sub.resources) {
       // Se nao tem assinatura, mostra apenas itens basicos
-      const allowedIds = ['dashboard', 'accounts', 'credit-cards', 'lancamentos', 'categories', 'subscription', 'settings'];
+      const allowedIds = ['dashboard', 'accounts', 'credit-cards', 'lancamentos', 'categories', 'subscription', 'settings', 'forecast'];
       return this.navItems.filter(item => allowedIds.includes(item.id));
     }
 
@@ -151,9 +153,10 @@ export class SidebarComponent implements OnInit {
       return !!sub.resources[item.resource];  // Verifica se recurso esta habilitado
     });
   });
+  */
 
   // TEMPORARIO: retorna todos os itens sem filtragem por plano
-  // filteredNavItems = computed(() => this.navItems);
+  filteredNavItems = computed(() => this.navItems);
 
   adminItems: NavItem[] = [
     { id: 'admin-dashboard', icon: 'admin_panel_settings', label: 'Painel Admin' },

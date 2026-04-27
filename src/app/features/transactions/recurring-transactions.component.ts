@@ -111,8 +111,8 @@ export interface RecurringItem {
               <div class="space-y-3">
                 <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Horizonte de Geração</label>
                 <p class="text-xs text-slate-400">Gera somente os lançamentos pendentes dentro do período escolhido.</p>
-                <div class="grid grid-cols-3 gap-3 pt-1">
-                  @for (days of [30, 60, 90]; track days) {
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+                  @for (days of [30, 60, 90, 180]; track days) {
                     <button type="button"
                       (click)="setGenerationHorizon(days)"
                       class="h-12 rounded-xl border-2 font-bold text-sm transition-all"
@@ -591,7 +591,7 @@ export class RecurringTransactionsComponent implements OnInit {
   }
 
   setGenerationHorizon(days: number) {
-    const s = { ...this.schedulerSettings(), generationHorizonDays: days as 30 | 60 | 90 };
+    const s = { ...this.schedulerSettings(), generationHorizonDays: days as 30 | 60 | 90 | 180 };
     this.scheduler.saveSettings(s);
     this.schedulerSettings.set(s);
   }

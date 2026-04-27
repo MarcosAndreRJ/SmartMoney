@@ -1,5 +1,6 @@
-import { Injectable, signal } from '@angular/core';
+import { Injectable, signal, inject, Injector } from '@angular/core';
 import { createClient, SupabaseClient } from '@supabase/supabase-js';
+import { CreditCardBillSyncService } from './credit-card-bill-sync.service';
 
 export interface SupabaseAccount {
   id: string;
@@ -36,6 +37,7 @@ export interface SupabaseTransaction {
   recurring_source_id?: string;
   loan_id?: string;
   installment_number?: number;
+  credit_card_bill_id?: string;
 }
 
 export interface SupabaseCardTransaction {
@@ -50,7 +52,23 @@ export interface SupabaseCardTransaction {
   installment_number?: number;
   total_installments?: number;
   installment_group_id?: string;
+  credit_card_bill_id?: string;
   created_at: string;
+}
+
+export interface SupabaseCreditCardBill {
+  id: string;
+  user_id: string;
+  card_id: string;
+  cycle_year: number;
+  cycle_month: number;
+  closing_date: string;
+  due_date: string;
+  total_amount: number;
+  status: 'open' | 'closed';
+  linked_transaction_id?: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface SupabaseContact {
@@ -120,6 +138,7 @@ export class SupabaseService {
   currentUserProfile = signal<UserProfile | null>(null);
   private initialFetch = false;
   private userPromise: Promise<any> | null = null;
+  private injector = inject(Injector);
 
   constructor() {
     const supabaseUrl = 'https://niobxjtufruqliakyydv.supabase.co';
@@ -142,12 +161,24 @@ export class SupabaseService {
 
     this.userPromise = (async () => {
       try {
-        const { data: { user } } = await this.supabase.auth.getUser();
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('Supabase getUser timeout')), 8000)
+        );
+        
+        const result = await Promise.race([
+          this.supabase.auth.getUser(),
+          timeoutPromise
+        ]) as { data: { user: any } };
+
+        const user = result?.data?.user;
         if (user && !this.initialFetch) {
           this.refreshProfileMetadata(user);
           this.initialFetch = true;
         }
         return user;
+      } catch (error) {
+        console.warn('Error fetching user (possible timeout or offline):', error);
+        return null;
       } finally {
         // Limpar a promessa após um curto período para permitir novas checagens se necessário,
         // mas mantendo tempo suficiente para resolver concorrências imediatas (ex: Promise.all)
@@ -220,6 +251,11 @@ export class SupabaseService {
       .delete()
       .eq('id', id)
       .eq('user_id', user.id);
+  }
+
+  async syncAllCardsBills() {
+    const syncService = this.injector.get(CreditCardBillSyncService);
+    return syncService.syncAllCardsBills();
   }
 
   // Transaction Management
@@ -428,9 +464,16 @@ export class SupabaseService {
     const user = await this.getUser();
     if (!user) return { data: null, error: new Error('User not authenticated') };
 
-    return await this.supabase
+    const res = await this.supabase
       .from('credit_card_transactions')
-      .insert([{ ...txData, user_id: user.id }]);
+      .insert([{ ...txData, user_id: user.id }])
+      .select()
+      .single();
+
+    if (!res.error && res.data) {
+      await this.syncBills([{ cardId: res.data.card_id, date: res.data.date }]);
+    }
+    return res;
   }
 
   async createCardTransactions(txs: Partial<SupabaseCardTransaction>[]) {
@@ -439,44 +482,71 @@ export class SupabaseService {
 
     const txsWithUser = txs.map(tx => ({ ...tx, user_id: user.id }));
 
-    return await this.supabase
+    const res = await this.supabase
       .from('credit_card_transactions')
-      .insert(txsWithUser);
+      .insert(txsWithUser)
+      .select();
+
+    if (!res.error && res.data) {
+      const affected = res.data.map(t => ({ cardId: t.card_id, date: t.date }));
+      await this.syncBills(affected);
+    }
+    return res;
   }
 
   async updateCardTransaction(id: string, updates: Partial<SupabaseCardTransaction>) {
-    const user = await this.getUser();
-    if (!user) return { data: null, error: new Error('User not authenticated') };
-
-    return await this.supabase
+    const res = await this.supabase
       .from('credit_card_transactions')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', user.id)
       .select()
       .single();
+
+    if (!res.error && res.data) {
+      await this.syncBills([{ cardId: res.data.card_id, date: res.data.date }]);
+    }
+    return res;
   }
 
   async deleteCardTransaction(id: string) {
-    const user = await this.getUser();
-    if (!user) return { error: new Error('User not authenticated') };
+    // Need to get the transaction first to know which bill it belongs to
+    const { data: tx } = await this.supabase.from('credit_card_transactions').select('card_id, date').eq('id', id).single();
 
-    return await this.supabase
+    const res = await this.supabase
       .from('credit_card_transactions')
       .delete()
-      .eq('id', id)
-      .eq('user_id', user.id);
+      .eq('id', id);
+
+    if (!res.error && tx) {
+      await this.syncBills([{ cardId: tx.card_id, date: tx.date }]);
+    }
+    return res;
   }
 
   async deleteCardTransactionGroup(groupId: string) {
-    const user = await this.getUser();
-    if (!user) return { error: new Error('User not authenticated') };
+    // Need to get the transactions first to know which bills are affected
+    const { data: txs } = await this.supabase.from('credit_card_transactions').select('card_id, date').eq('installment_group_id', groupId);
 
-    return await this.supabase
+    const res = await this.supabase
       .from('credit_card_transactions')
       .delete()
-      .eq('installment_group_id', groupId)
-      .eq('user_id', user.id);
+      .eq('installment_group_id', groupId);
+
+    if (!res.error && txs && txs.length > 0) {
+      const affected = txs.map(t => ({ cardId: t.card_id, date: t.date }));
+      await this.syncBills(affected);
+    }
+    return res;
+  }
+
+  private async syncBills(affected: { cardId: string, date: string }[]) {
+    try {
+      const { CreditCardBillSyncService } = await import('./credit-card-bill-sync.service');
+      const syncService = this.injector.get(CreditCardBillSyncService);
+      await syncService.syncBills(affected);
+    } catch (err) {
+      console.error('Error syncing credit card bills:', err);
+    }
   }
 
   // Contact Management

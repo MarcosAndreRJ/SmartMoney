@@ -15,8 +15,8 @@ import { Goal } from './goal.models';
       <!-- Header -->
       <div class="p-8 pb-0 flex justify-between items-start">
         <div>
-          <h2 class="text-2xl font-bold text-slate-900">Criar Nova Meta</h2>
-          <p class="text-slate-500 mt-1">Defina o caminho para sua próxima conquista.</p>
+          <h2 class="text-2xl font-bold text-slate-900">{{ goal ? 'Editar Meta' : 'Criar Nova Meta' }}</h2>
+          <p class="text-slate-500 mt-1">{{ goal ? 'Atualize as informações do seu objetivo.' : 'Defina o caminho para sua próxima conquista.' }}</p>
         </div>
         <button (click)="closeModal.emit()" class="text-slate-400 hover:text-slate-600 transition-colors">
           <mat-icon>close</mat-icon>
@@ -41,14 +41,16 @@ import { Goal } from './goal.models';
                 class="w-full h-14 pl-14 pr-6 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-slate-300 outline-none transition-all text-slate-900">
             </div>
           </div>
-          <div class="space-y-2">
-            <label for="initialDeposit" class="text-sm font-bold text-slate-700">Depósito Inicial <span class="text-slate-400 font-normal">(Opcional)</span></label>
-            <div class="relative">
-              <span class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-medium">R$</span>
-              <input id="initialDeposit" formControlName="initialDeposit" type="number" placeholder="0,00"
-                class="w-full h-14 pl-14 pr-6 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-slate-300 outline-none transition-all text-slate-900">
+          @if (!goal) {
+            <div class="space-y-2">
+              <label for="initialDeposit" class="text-sm font-bold text-slate-700">Depósito Inicial <span class="text-slate-400 font-normal">(Opcional)</span></label>
+              <div class="relative">
+                <span class="absolute left-6 top-1/2 -translate-y-1/2 text-slate-400 font-medium">R$</span>
+                <input id="initialDeposit" formControlName="initialDeposit" type="number" placeholder="0,00"
+                  class="w-full h-14 pl-14 pr-6 rounded-2xl bg-slate-50 border border-slate-100 focus:bg-white focus:border-slate-300 outline-none transition-all text-slate-900">
+              </div>
             </div>
-          </div>
+          }
         </div>
 
         <!-- Seleção de Conta para o Depósito Inicial -->
@@ -137,7 +139,7 @@ import { Goal } from './goal.models';
         <button (click)="submit()"
           [disabled]="goalForm.invalid"
           class="flex-[2] h-14 rounded-2xl font-bold text-white bg-[#0F172A] hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-lg shadow-slate-200">
-          Criar Meta
+          {{ goal ? 'Salvar Alterações' : 'Criar Meta' }}
         </button>
       </div>
     </div>
@@ -189,7 +191,7 @@ export class GoalModalComponent implements OnInit {
       this.goalForm.patchValue({
         name: this.goal.name,
         target_amount: this.goal.target_amount,
-        deadline: this.goal.deadline,
+        deadline: this.goal.deadline ? this.goal.deadline.split('T')[0] : '',
         frequency: this.goal.frequency
       });
       // Initial deposit is only for creation, we hide it or disable it for edit conceptually,
